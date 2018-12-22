@@ -1,0 +1,55 @@
+{
+  "publishConfig": {
+    "access": "public"
+  },
+  "name": "@isomorphic-git/idb-fs",
+  "version": "0.0.0",
+  "description": "A lean and fast 'fs' for the browser",
+  "main": "index.js",
+  "scripts": {
+    "test": "karma start --single-run"
+  },
+  "dependencies": {
+    "idb-keyval": "3.1.0",
+    "isomorphic-textencoder": "1.0.1",
+    "just-debounce-it": "1.1.0",
+    "just-once": "1.1.0",
+    "print-tree": "0.1.5"
+  },
+  "devDependencies": {
+    "karma": "^3.1.1",
+    "karma-chrome-launcher": "^2.2.0",
+    "karma-edge-launcher": "^0.4.2",
+    "karma-firefox-launcher": "^1.1.0",
+    "karma-jasmine": "^2.0.1",
+    "karma-junit-reporter": "^1.2.0",
+    "karma-safari-launcher": "^1.0.0",
+    "karma-sauce-launcher": "^1.2.0",
+    "karma-verbose-reporter": "0.0.6",
+    "karma-webpack": "^3.0.5",
+    "prettier": "^1.15.3",
+    "puppeteer": "^1.10.0",
+    "webpack": "^4.26.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/isomorphic-git/idb-fs.git"
+  },
+  "files": [
+    "**/*.js",
+    "!__tests__",
+    "!coverage"
+  ],
+  "keywords": [
+    "browser",
+    "fs",
+    "indexeddb",
+    "idb"
+  ],
+  "author": "William Hilton <wmhilton@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/isomorphic-git/idb-fs/issues"
+  },
+  "homepage": "https://github.com/isomorphic-git/idb-fs#readme"
+}
