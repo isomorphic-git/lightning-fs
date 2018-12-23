@@ -1,4 +1,4 @@
-.git	777
+module.exports = `.git	777
 	hooks	777
 	info	777
 	objects	777
@@ -1765,4 +1765,4 @@ package.json	666	3996	1545535032598
 renovate.json	666	244	1545535032598
 rollup.config.js	666	804	1545535032598
 tsconfig.json	666	581	1545535032598
-webpack.config.js	666	1730	1545535032599
+webpack.config.js	666	1730	1545535032599`
