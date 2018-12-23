@@ -1,18 +1,17 @@
 const once = require("just-once");
 const { encode, decode } = require("isomorphic-textencoder");
 const debounce = require("just-debounce-it");
-const idb = require("idb-keyval");
 
 const path = require("./path.js");
 const Stat = require("./Stat.js");
 const CacheFS = require("./CacheFS.js");
 const { ENOENT, ENOTEMPTY } = require("./errors.js");
+const IdbBackend = require("./IdbBackend.js");
 const clock = require("./clock.js");
 
 export default class FS {
   constructor(name, { wipe } = {}) {
-    this._database = name;
-    this._store = new idb.Store(this._database, this._database + "_files");
+    this._backend = new IdbBackend(name);
     this._cache = new CacheFS(name);
     this.saveSuperblock = debounce(() => {
       console.log("saving superblock");
@@ -44,13 +43,13 @@ export default class FS {
     return [filepath, opts, cb];
   }
   _wipe() {
-    return idb.clear().then(() => this._saveSuperblock());
+    return this._backend.wipe().then(() => this._saveSuperblock());
   }
   _saveSuperblock() {
-    return idb.set("!root", this._cache._root, this._store);
+    return this._backend.saveSuperblock(this._cache._root);
   }
   _loadSuperblock() {
-    return idb.get("!root", this._store).then(root => {
+    return this._backend.loadSuperblock().then(root => {
       if (root) this._cache._root = root;
     });
   }
@@ -66,8 +65,7 @@ export default class FS {
         } catch (err) {
           return cb(err);
         }
-        idb
-          .get(filepath, this._store)
+        this._backend.readFile(filepath)
           .then(data => {
             if (data) {
               if (encoding === "utf8") {
@@ -107,8 +105,7 @@ export default class FS {
           console.log("writeFile: cache corrupted - unable to keep cache in sync with db");
           return cb(new ENOENT());
         }
-        idb
-          .set(filepath, data, this._store)
+        this._backend.writeFile(filepath, data)
           .then(() => cb(null))
           .catch(err => cb(err));
       })
@@ -124,8 +121,7 @@ export default class FS {
         } catch (err) {
           return cb(err);
         }
-        idb
-          .del(filepath, this._store)
+        this._backend.unlink(filepath)
           .then(() => cb(null))
           .catch(cb);
       })

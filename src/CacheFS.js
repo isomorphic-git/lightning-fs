@@ -1,5 +1,3 @@
-const printTree = require("print-tree");
-
 const path = require("./path.js");
 const { ENOENT, EEXIST, ENOTEMPTY } = require("./errors.js");
 
@@ -7,34 +5,76 @@ const STAT = 0;
 
 module.exports = class CacheFS {
   constructor() {
+    const root = this._makeRoot();
+    this._root = new Map([["/", root]]);
+  }
+  _makeRoot() {
     let root = new Map();
     let stat = { mode: 0o777, type: "dir", size: 0, mtimeMs: Date.now() };
     root.set(STAT, stat);
-    this._root = new Map([["/", root]]);
+    return root
   }
-  _print() {
-    const root = [...this._root.entries()][0];
-    return printTree(
-      root,
-      node => {
-        let stat = node[1].get(STAT);
+  print(root) {
+    root = root || this._root.get("/")
+    let str = "";
+    const printTree = (root, indent) => {
+      for (let [file, node] of root) {
+        if (file === 0) continue;
+        let stat = node.get(STAT);
         let mode = stat.mode.toString(8);
         if (stat.type === "file") {
-          return `${node[0]} [mode=${mode} size=${stat.size} mtime=${stat.mtimeMs}]`;
+          str += `\n${"\t".repeat(indent)}${file}\t${mode}\t${stat.size}\t${
+            stat.mtimeMs
+          }`;
         } else {
-          return `${node[0]} [mode=${mode}]`;
-        }
-      },
-      node => {
-        if (node[1] === null) {
-          // it's a file
-          return [];
-        } else {
-          // it's a dir
-          return [...node[1].entries()].filter(([key]) => typeof key === "string");
+          str += `\n${"\t".repeat(indent)}${file}\t${mode}`;
+          printTree(node, indent + 1);
         }
       }
-    );
+    };
+    printTree(root, 0);
+    return str.trimStart();
+  }
+  parse(print) {
+    function mk(stat) {
+      if (stat.length === 1) {
+        let [mode] = stat
+        mode = parseInt(mode, 8);
+        return new Map([
+          [STAT, { mode, type: "dir", size: 0, mtimeMs: Date.now() }]
+        ]);
+      } else {
+        let [mode, size, mtimeMs] = stat;
+        mode = parseInt(mode, 8);
+        size = parseInt(size);
+        mtimeMs = parseInt(mtimeMs);
+        return new Map([[STAT, { mode, type: "file", size, mtimeMs }]]);
+      }
+    }
+
+    let lines = print.trim().split("\n");
+    let _root = this._makeRoot();
+    let stack = [
+      { indent: -1, node: _root },
+      { indent: 0, node: null }
+    ];
+    for (let line of lines) {
+      // let [, prefix, filename, stat]
+      let prefix = line.match(/^\t*/)[0];
+      let indent = prefix.length;
+      line = line.slice(indent);
+      let [filename, ...stat] = line.split("\t");
+      let node = mk(stat);
+      if (indent <= stack[stack.length - 1].indent) {
+        while (indent <= stack[stack.length - 1].indent) {
+          stack.pop();
+        }
+      }
+      stack.push({ indent, node });
+      let cd = stack[stack.length - 2].node;
+      cd.set(filename, node);
+    }
+    return _root;
   }
   _lookup(filepath) {
     let dir = this._root;
@@ -44,27 +84,6 @@ module.exports = class CacheFS {
     }
     return dir;
   }
-  // _mkdirp(filepath) {
-  //   let dir = this._root;
-  //   let traversing = true;
-  //   let tmp;
-  //   for (let part of path.split(filepath)) {
-  //     if (traversing) {
-  //       tmp = dir.get(part);
-  //       if (tmp) {
-  //         dir = tmp;
-  //       } else {
-  //         traversing = false;
-  //       }
-  //     }
-  //     if (!traversing) {
-  //       tmp = new Map();
-  //       dir.set(part, tmp);
-  //       dir = tmp;
-  //     }
-  //   }
-  //   return dir;
-  // }
   mkdir(filepath, { mode }) {
     if (filepath === "/") throw new EEXIST();
     let dir = this._lookup(path.dirname(filepath));

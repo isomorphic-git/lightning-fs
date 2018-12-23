@@ -1,7 +1,3 @@
-# Node.js
-# Build a general Node.js application with npm.
-# Add steps that analyze code, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/vsts/pipelines/languages/javascript
 jobs:
 - job: Linux
 
@@ -51,14 +47,7 @@ jobs:
     condition: and(succeededOrFailed(), ne(variables['system.pullrequest.isfork'], true))
     inputs:
       artifactName: 'npm-tarball.tgz'
-      PathtoPublish: '$(System.DefaultWorkingDirectory)/isomorphic-git-0.0.0-development.tgz'
-
-  - task: PublishBuildArtifacts@1
-    displayName: 'Save bundle.umd.min.js'
-    condition: and(succeededOrFailed(), ne(variables['system.pullrequest.isfork'], true))
-    inputs:
-      artifactName: 'bundle.umd.min.js'
-      PathtoPublish: '$(System.DefaultWorkingDirectory)/dist/bundle.umd.min.js'
+      PathtoPublish: '$(System.DefaultWorkingDirectory)/isomorphic-git-idb-fs-0.0.0-development.tgz'
 
   - script: npm run semantic-release
     displayName: 'Publish to npm'
@@ -66,5 +55,3 @@ jobs:
     env:
       GH_TOKEN: $(GITHUB_TOKEN)
       NPM_TOKEN: $(Npm.Token)
-      TWITTER_ACCESS_TOKEN_SECRET: $(TWITTER_ACCESS_TOKEN_SECRET)
-      TWITTER_CONSUMER_SECRET: $(TWITTER_CONSUMER_SECRET)
