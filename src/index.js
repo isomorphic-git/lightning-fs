@@ -15,7 +15,6 @@ module.exports = class FS {
     this._backend = new IdbBackend(name);
     this._cache = new CacheFS(name);
     this.saveSuperblock = debounce(() => {
-      console.log("saving superblock");
       this._saveSuperblock();
     }, 500);
     if (url) {
@@ -26,6 +25,15 @@ module.exports = class FS {
     } else {
       this.superblockPromise = this._loadSuperblock();
     }
+    // Needed so things don't break if you pass individual functions to `pify` etc
+    this.readFile = this.readFile.bind(this)
+    this.writeFile = this.writeFile.bind(this)
+    this.unlink = this.unlink.bind(this)
+    this.mkdir = this.mkdir.bind(this)
+    this.rmdir = this.rmdir.bind(this)
+    this.readdir = this.readdir.bind(this)
+    this.stat = this.stat.bind(this)
+    this.lstat = this.lstat.bind(this)
   }
   _cleanParams(filepath, opts, cb, stopClock = null, save = false) {
     filepath = path.normalize(filepath);
@@ -104,9 +112,7 @@ module.exports = class FS {
             cb(null, data);
           })
           .catch(err => {
-            console.log("filepath", filepath);
-            console.log(err);
-            console.log("readFile: stat data out of sync with db");
+            console.log("ERROR: readFile: stat data out of sync with db:", filepath);
           });
       })
       .catch(cb);
@@ -127,10 +133,7 @@ module.exports = class FS {
         try {
           this._cache.writeFile(filepath, data, { mode });
         } catch (err) {
-          console.log("filepath", filepath);
-          console.log(err);
-          console.log("writeFile: cache corrupted - unable to keep cache in sync with db");
-          return cb(new ENOENT());
+          return cb(err);
         }
         this._backend.writeFile(filepath, data)
           .then(() => cb(null))

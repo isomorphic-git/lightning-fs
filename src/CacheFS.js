@@ -82,7 +82,7 @@ module.exports = class CacheFS {
     let dir = this._root;
     for (let part of path.split(filepath)) {
       dir = dir.get(part);
-      if (!dir) throw new ENOENT();
+      if (!dir) throw new ENOENT(filepath);
     }
     return dir;
   }

@@ -27,4 +27,7 @@ module.exports = class Stat {
   isDirectory() {
     return this.type === "dir";
   }
+  isSymbolicLink() {
+    return this.type === "symlink";
+  }
 };
