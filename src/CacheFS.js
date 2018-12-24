@@ -5,47 +5,41 @@ const STAT = 0;
 
 module.exports = class CacheFS {
   constructor() {
-    const root = this._makeRoot();
-    this._root = new Map([["/", root]]);
+    this._root = new Map([["/", this._makeRoot()]]);
   }
-  _makeRoot(root) {
-    root = root || new Map();
-    let stat = { mode: 0o777, type: "dir", size: 0, mtimeMs: Date.now() };
-    root.set(STAT, stat);
+  _makeRoot(root = new Map()) {
+    root.set(STAT, { mode: 0o777, type: "dir", size: 0, mtimeMs: Date.now() });
     return root
   }
   loadSuperBlock(superblock) {
     if (typeof superblock === 'string') {
-      let root = this.parse(superblock)
-      root = this._makeRoot(root);
-      this._root = new Map([["/", root]]);
+      this._root = new Map([["/", this._makeRoot(this.parse(superblock))]]);
     } else {
       this._root = superblock
     }
   }
-  print(root) {
-    root = root || this._root.get("/")
+  print(root = this._root.get("/")) {
     let str = "";
     const printTree = (root, indent) => {
       for (let [file, node] of root) {
         if (file === 0) continue;
         let stat = node.get(STAT);
         let mode = stat.mode.toString(8);
+        str += `${"\t".repeat(indent)}${file}\t${mode}`
         if (stat.type === "file") {
-          str += `\n${"\t".repeat(indent)}${file}\t${mode}\t${stat.size}\t${
-            stat.mtimeMs
-          }`;
+          str += `\t${stat.size}\t${stat.mtimeMs}\n`;
         } else {
-          str += `\n${"\t".repeat(indent)}${file}\t${mode}`;
+          str += `\n`
           printTree(node, indent + 1);
         }
       }
     };
     printTree(root, 0);
-    return str.trimStart() + '\n';
+    return str;
   }
   parse(print) {
     function mk(stat) {
+      // TODO: Use a better heuristic for determining whether file or dir
       if (stat.length === 1) {
         let [mode] = stat
         mode = parseInt(mode, 8);
@@ -68,7 +62,6 @@ module.exports = class CacheFS {
       { indent: 0, node: null }
     ];
     for (let line of lines) {
-      // let [, prefix, filename, stat]
       let prefix = line.match(/^\t*/)[0];
       let indent = prefix.length;
       line = line.slice(indent);

@@ -22,14 +22,7 @@ describe("http fallback", () => {
         done();
       });
     });
-    it("read child dir /0", done => {
-      fs.readdir("/0", (err, data) => {
-        expect(err).toBe(null);
-        expect(data).toEqual(['a.txt', 'b.txt', 'c.txt'])
-        done();
-      });
-    });
-    it("read child dir /1", done => {
+    it("read child dir", done => {
       fs.readdir("/1", (err, data) => {
         expect(err).toBe(null);
         expect(data).toEqual(['d.txt', 'e.txt', 'f.txt'])
@@ -63,9 +56,9 @@ describe("http fallback", () => {
 
   describe("writeFile", () => {
     it("writing a file overwrites the server version", done => {
-      fs.writeFile("/a.txt", "welcome", (err) => {
+      fs.writeFile("/b.txt", "welcome", (err) => {
         expect(err).toBe(null)
-        fs.readFile("/a.txt", 'utf8', (err, data) => {
+        fs.readFile("/b.txt", 'utf8', (err, data) => {
           expect(err).toBe(null);
           expect(data).toEqual('welcome');
           done();

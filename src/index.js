@@ -10,7 +10,7 @@ const IdbBackend = require("./IdbBackend.js");
 const HttpBackend = require("./HttpBackend.js")
 const clock = require("./clock.js");
 
-export default class FS {
+module.exports = class FS {
   constructor(name, { wipe, url } = {}) {
     this._backend = new IdbBackend(name);
     this._cache = new CacheFS(name);

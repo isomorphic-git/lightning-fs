@@ -2,10 +2,10 @@
   "publishConfig": {
     "access": "public"
   },
-  "name": "@isomorphic-git/idb-fs",
+  "name": "@isomorphic-git/lightning-fs",
   "version": "0.0.0",
   "description": "A lean and fast 'fs' for the browser",
-  "main": "index.js",
+  "main": "src/index.js",
   "bin": {
     "superblocktxt": "src/superblocktxt.js"
   },
@@ -36,7 +36,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/isomorphic-git/idb-fs.git"
+    "url": "git+https://github.com/isomorphic-git/lightning-fs.git"
   },
   "files": [
     "**/*.js",
@@ -52,7 +52,7 @@
   "author": "William Hilton <wmhilton@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/isomorphic-git/idb-fs/issues"
+    "url": "https://github.com/isomorphic-git/lightning-fs/issues"
   },
-  "homepage": "https://github.com/isomorphic-git/idb-fs#readme"
+  "homepage": "https://github.com/isomorphic-git/lightning-fs#readme"
 }

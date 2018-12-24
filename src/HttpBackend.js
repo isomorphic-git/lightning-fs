@@ -1,4 +1,4 @@
-module.exports = class IdbBackend {
+module.exports = class HttpBackend {
   constructor(url) {
     this._url = url;
   }
