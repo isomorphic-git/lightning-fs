@@ -3,7 +3,7 @@
     "access": "public"
   },
   "name": "@isomorphic-git/lightning-fs",
-  "version": "0.0.0",
+  "version": "0.0.0-development",
   "description": "A lean and fast 'fs' for the browser",
   "main": "src/index.js",
   "bin": {
