@@ -25,17 +25,17 @@ module.exports = (dirpath) => {
         symLinks[lstat.dev][lstat.ino] = true
       }
       let mode = lstat.mode.toString(8);
-      str += `\n${"\t".repeat(indent)}`
+      str += `${"\t".repeat(indent)}`
       if (lstat.isDirectory()) {
-        str += `${file}\t${mode}`;
+        str += `${file}\t${mode}\n`;
         printTree(fpath, indent + 1);
       } else {
-        str += `${file}\t${mode}\t${lstat.size}\t${lstat.mtimeMs}`;
+        str += `${file}\t${mode}\t${lstat.size}\t${lstat.mtimeMs}\n`;
       }
     }
   };
   printTree(dirpath, 0);
-  return str.trimStart() + '\n';
+  return str;
 }
 
 if (!module.parent) {
