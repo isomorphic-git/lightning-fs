@@ -105,8 +105,6 @@ module.exports = class FS {
             if (data) {
               if (encoding === "utf8") {
                 data = decode(data);
-              } else {
-                data = Buffer.from(data);
               }
             }
             cb(null, data);

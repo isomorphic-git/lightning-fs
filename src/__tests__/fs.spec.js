@@ -63,11 +63,11 @@ describe("fs module", () => {
     });
     it("read file", done => {
       fs.mkdir("/readFile", err => {
-        fs.writeFile("/readFile/readFile-buffer.txt", "HELLO", err => {
+        fs.writeFile("/readFile/readFile-uint8.txt", "HELLO", err => {
           expect(err).toBe(null);
-          fs.readFile("/readFile/readFile-buffer.txt", (err, data) => {
+          fs.readFile("/readFile/readFile-uint8.txt", (err, data) => {
             expect(err).toBe(null);
-            expect(data).toEqual(Buffer.from(HELLO));
+            expect(data).toEqual(HELLO);
             done();
           });
         });
