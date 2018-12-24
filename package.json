@@ -6,19 +6,20 @@
   "version": "0.0.0-development",
   "description": "A lean and fast 'fs' for the browser",
   "main": "src/index.js",
+  "unpkg": "dist/lightning-fs.min.js",
   "bin": {
     "superblocktxt": "src/superblocktxt.js"
   },
   "scripts": {
     "test": "karma start --single-run",
+    "build": "webpack",
     "semantic-release": "semantic-release"
   },
   "dependencies": {
     "idb-keyval": "3.1.0",
     "isomorphic-textencoder": "1.0.1",
     "just-debounce-it": "1.1.0",
-    "just-once": "1.1.0",
-    "print-tree": "0.1.5"
+    "just-once": "1.1.0"
   },
   "devDependencies": {
     "karma": "^3.1.1",
@@ -34,7 +35,8 @@
     "prettier": "^1.15.3",
     "puppeteer": "^1.10.0",
     "semantic-release": "^15.13.1",
-    "webpack": "^4.26.0"
+    "webpack": "^4.28.2",
+    "webpack-cli": "^3.1.2"
   },
   "repository": {
     "type": "git",
