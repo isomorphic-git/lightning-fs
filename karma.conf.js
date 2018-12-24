@@ -155,7 +155,6 @@ module.exports = function (config) {
   } else {
     options.browsers.push('ChromeHeadlessNoSandbox')
     options.browsers.push('FirefoxHeadless')
-    options.browsers.push('Edge')
   }
 
   console.log('running with browsers:', options.browsers)
