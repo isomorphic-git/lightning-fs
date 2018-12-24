@@ -33,6 +33,7 @@
     "karma-webpack": "^3.0.5",
     "prettier": "^1.15.3",
     "puppeteer": "^1.10.0",
+    "semantic-release": "^15.13.1",
     "webpack": "^4.26.0"
   },
   "repository": {
