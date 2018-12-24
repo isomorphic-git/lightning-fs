@@ -7,16 +7,20 @@ const Stat = require("./Stat.js");
 const CacheFS = require("./CacheFS.js");
 const { ENOENT, ENOTEMPTY } = require("./errors.js");
 const IdbBackend = require("./IdbBackend.js");
+const HttpBackend = require("./HttpBackend.js")
 const clock = require("./clock.js");
 
 export default class FS {
-  constructor(name, { wipe } = {}) {
+  constructor(name, { wipe, url } = {}) {
     this._backend = new IdbBackend(name);
     this._cache = new CacheFS(name);
     this.saveSuperblock = debounce(() => {
       console.log("saving superblock");
       this._saveSuperblock();
     }, 500);
+    if (url) {
+      this._fallback = new HttpBackend(url)
+    }
     if (wipe) {
       this.superblockPromise = this._wipe();
     } else {
@@ -43,14 +47,30 @@ export default class FS {
     return [filepath, opts, cb];
   }
   _wipe() {
-    return this._backend.wipe().then(() => this._saveSuperblock());
+    return this._backend.wipe().then(() => {
+      if (this._fallback) {
+        return this._fallback.loadSuperblock().then(text => {
+          if (text) {
+            this._cache.loadSuperBlock(text)
+          }
+        })
+      }
+     }).then(() => this._saveSuperblock());
   }
   _saveSuperblock() {
     return this._backend.saveSuperblock(this._cache._root);
   }
   _loadSuperblock() {
     return this._backend.loadSuperblock().then(root => {
-      if (root) this._cache._root = root;
+      if (root) {
+        this._cache.loadSuperBlock(root);
+      } else if (this._fallback) {
+        return this._fallback.loadSuperblock().then(text => {
+          if (text) {
+            this._cache.loadSuperBlock(text)
+          }
+        })
+      }
     });
   }
   readFile(filepath, opts, cb) {
@@ -66,6 +86,13 @@ export default class FS {
           return cb(err);
         }
         this._backend.readFile(filepath)
+          .then(data => {
+            if (data || !this._fallback) {
+              return data
+            } else {
+              return this._fallback.readFile(filepath)
+            }
+          })
           .then(data => {
             if (data) {
               if (encoding === "utf8") {

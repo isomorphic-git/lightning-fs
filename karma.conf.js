@@ -21,7 +21,19 @@ module.exports = function (config) {
     frameworks: ['jasmine'],
     // list of files / patterns to load in the browser
     files: [
-      'src/**/*.spec.js'
+      'src/**/*.spec.js',
+      {
+        pattern: 'src/__tests__/__fixtures__/test-folder/**/*',
+        served: true,
+        watched: false,
+        included: false
+      },
+      {
+        pattern: 'src/__tests__/__fixtures__/test-folder/**/.*',
+        served: true,
+        watched: false,
+        included: false
+      },
     ],
     // list of files to exclude
     // exclude: [

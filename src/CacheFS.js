@@ -8,11 +8,20 @@ module.exports = class CacheFS {
     const root = this._makeRoot();
     this._root = new Map([["/", root]]);
   }
-  _makeRoot() {
-    let root = new Map();
+  _makeRoot(root) {
+    root = root || new Map();
     let stat = { mode: 0o777, type: "dir", size: 0, mtimeMs: Date.now() };
     root.set(STAT, stat);
     return root
+  }
+  loadSuperBlock(superblock) {
+    if (typeof superblock === 'string') {
+      let root = this.parse(superblock)
+      root = this._makeRoot(root);
+      this._root = new Map([["/", root]]);
+    } else {
+      this._root = superblock
+    }
   }
   print(root) {
     root = root || this._root.get("/")
@@ -33,7 +42,7 @@ module.exports = class CacheFS {
       }
     };
     printTree(root, 0);
-    return str.trimStart();
+    return str.trimStart() + '\n';
   }
   parse(print) {
     function mk(stat) {

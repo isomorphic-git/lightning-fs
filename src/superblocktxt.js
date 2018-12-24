@@ -1,3 +1,4 @@
+#! /usr/bin/env node
 var fs = require('fs')
 var path = require('path')
 var symLinks = {}
@@ -7,6 +8,9 @@ module.exports = (dirpath) => {
   const printTree = (root, indent) => {
     let files = fs.readdirSync(root)
     for (let file of files) {
+      // Ignore itself
+      if (file === '.superblock.txt') continue
+
       let fpath = `${root}/${file}`
       let lstat = fs.lstatSync(fpath)
       // Avoid infinite loops.
@@ -31,5 +35,11 @@ module.exports = (dirpath) => {
     }
   };
   printTree(dirpath, 0);
-  return str.trimStart();
+  return str.trimStart() + '\n';
+}
+
+if (!module.parent) {
+  let filepath = process.cwd() + '/.superblock.txt'
+  let contents = module.exports(process.cwd())
+  fs.writeFileSync(filepath, contents)
 }

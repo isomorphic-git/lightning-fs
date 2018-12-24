@@ -6,6 +6,9 @@
   "version": "0.0.0",
   "description": "A lean and fast 'fs' for the browser",
   "main": "index.js",
+  "bin": {
+    "superblocktxt": "src/superblocktxt.js"
+  },
   "scripts": {
     "test": "karma start --single-run"
   },
