@@ -67,7 +67,8 @@ describe("fs module", () => {
           expect(err).toBe(null);
           fs.readFile("/readFile/readFile-uint8.txt", (err, data) => {
             expect(err).toBe(null);
-            expect(data).toEqual(HELLO);
+            // instanceof comparisons on Uint8Array's retrieved from IDB are broken in Safari Mobile 11.x (source: https://github.com/dfahlander/Dexie.js/issues/656#issuecomment-391866600)
+            expect([...data]).toEqual([...HELLO]);
             done();
           });
         });
