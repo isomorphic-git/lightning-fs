@@ -12,6 +12,7 @@ module.exports = class Stat {
     this.type = stats.type;
     this.mode = stats.mode;
     this.size = stats.size;
+    this.ino = stats.ino;
     const [mtimeSeconds, mtimeNanoseconds] = SecondsNanoseconds(stats.mtimeMs);
     const [ctimeSeconds, ctimeNanoseconds] = SecondsNanoseconds(stats.ctimeMs || stats.mtimeMs);
     this.mtimeSeconds = mtimeSeconds;
@@ -22,7 +23,6 @@ module.exports = class Stat {
     this.uid = 1;
     this.gid = 1;
     this.dev = 1;
-    this.ino = 1;
   }
   isDirectory() {
     return this.type === "dir";
