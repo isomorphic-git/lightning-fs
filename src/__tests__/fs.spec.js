@@ -202,4 +202,53 @@ describe("fs module", () => {
       });
     });
   });
+
+  describe("rename", () => {
+    it("create and rename file", done => {
+      fs.mkdir("/rename", () => {
+        fs.writeFile("/rename/a.txt", "", () => {
+          fs.rename("/rename/a.txt", "/rename/b.txt", (err) => {
+            expect(err).toBe(null);
+            fs.readdir("/rename", (err, data) => {
+              expect(data.includes("a.txt")).toBe(false);
+              expect(data.includes("b.txt")).toBe(true);
+              fs.readFile("/rename/a.txt", (err, data) => {
+                expect(err).not.toBe(null)
+                expect(err.code).toBe("ENOENT")
+                fs.readFile("/rename/b.txt", "utf8", (err, data) => {
+                  expect(err).toBe(null)
+                  expect(data).toBe("")
+                  done();
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+    it("create and rename directory", done => {
+      fs.mkdir("/rename", () => {
+        fs.mkdir("/rename/a", () => {
+          fs.writeFile("/rename/a/file.txt", "", () => {
+            fs.rename("/rename/a", "/rename/b", (err) => {
+              expect(err).toBe(null);
+              fs.readdir("/rename", (err, data) => {
+                expect(data.includes("a")).toBe(false);
+                expect(data.includes("b")).toBe(true);
+                fs.readFile("/rename/a/file.txt", (err, data) => {
+                  expect(err).not.toBe(null)
+                  expect(err.code).toBe("ENOENT")
+                  fs.readFile("/rename/b/file.txt", "utf8", (err, data) => {
+                    expect(err).toBe(null)
+                    expect(data).toBe("")
+                    done();
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  });
 });

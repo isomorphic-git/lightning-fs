@@ -163,13 +163,20 @@ module.exports = class CacheFS {
     return stat;
   }
   unlink(filepath) {
-    // find inode
-    let stat = this.stat(filepath);
     // remove from parent
     let parent = this._lookup(path.dirname(filepath));
     let basename = path.basename(filepath);
     parent.delete(basename);
-    return stat;
+  }
+  rename(oldFilepath, newFilepath) {
+    // grab reference
+    let entry = this._lookup(oldFilepath);
+    // remove from parent directory
+    this.unlink(oldFilepath)
+    // insert into new parent directory
+    let dir = this._lookup(path.dirname(newFilepath));
+    let basename = path.basename(newFilepath);
+    dir.set(basename, entry);
   }
   stat(filepath) {
     return this._lookup(filepath).get(STAT);

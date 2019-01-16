@@ -148,7 +148,8 @@ module.exports = class FS {
       .then(() => {
         let stat
         try {
-          stat = this._cache.unlink(filepath);
+          stat = this._cache.stat(filepath);
+          this._cache.unlink(filepath);
         } catch (err) {
           return cb(err);
         }
@@ -195,6 +196,18 @@ module.exports = class FS {
       .then(() => {
         try {
           this._cache.rmdir(filepath);
+          return cb(null);
+        } catch (err) {
+          return cb(err);
+        }
+      })
+      .catch(cb);
+  }
+  rename(oldFilepath, newFilepath, cb) {
+    this.superblockPromise
+      .then(() => {
+        try {
+          this._cache.rename(oldFilepath, newFilepath);
           return cb(null);
         } catch (err) {
           return cb(err);
