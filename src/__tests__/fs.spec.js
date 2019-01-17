@@ -52,6 +52,25 @@ describe("fs module", () => {
         });
       });
     });
+    it("write file perserves old inode", done => {
+      fs.mkdir("/writeFile", err => {
+        fs.writeFile("/writeFile/writeFile-inode.txt", "HELLO", err => {
+          expect(err).toBe(null);
+          fs.stat("/writeFile/writeFile-inode.txt", (err, stats) => {
+            expect(err).toBe(null);
+            let inode = stats.ino;
+            fs.writeFile("/writeFile/writeFile-inode.txt", "WORLD", err => {
+              expect(err).toBe(null);
+              fs.stat("/writeFile/writeFile-inode.txt", (err, stats) => {
+                expect(err).toBe(null);
+                expect(stats.ino).toEqual(inode);
+                done();
+              });
+            });
+          });
+        });
+      });
+    });
   });
 
   describe("readFile", () => {

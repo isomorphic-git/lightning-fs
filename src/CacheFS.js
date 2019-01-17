@@ -8,7 +8,7 @@ module.exports = class CacheFS {
     this._root = new Map([["/", this._makeRoot()]]);
   }
   _makeRoot(root = new Map()) {
-    root.set(STAT, { mode: 0o777, type: "dir", size: 0, mtimeMs: Date.now() });
+    root.set(STAT, { mode: 0o777, type: "dir", size: 0, ino: 0, mtimeMs: Date.now() });
     return root
   }
   loadSuperBlock(superblock) {
@@ -35,10 +35,10 @@ module.exports = class CacheFS {
     return val;
   }
   _maxInode(map) {
-    let max = 0;
+    let max = map.get(STAT).ino;
     for (let [key, val] of map) {
       if (key === STAT) continue;
-      max = Math.max(max, val.get(STAT).ino);
+      max = Math.max(max, this._maxInode(val));
     }
     return max;
   }
@@ -137,14 +137,19 @@ module.exports = class CacheFS {
     return [...dir.keys()].filter(key => typeof key === "string");
   }
   writeFile(filepath, data, { mode }) {
-    let oldStat;
+    let ino;
     try {
-      oldStat = this.stat(filepath);
+      let oldStat = this.stat(filepath);
+      if (mode === null) {
+        mode = oldStat.mode;
+      }
+      ino = oldStat.ino;
     } catch (err) {}
-    if (oldStat && mode == null) {
-      mode = oldStat.mode;
-    } else if (mode == null) {
+    if (mode == null) {
       mode = 0o666;
+    }
+    if (ino == null) {
+      ino = this.autoinc();
     }
     let dir = this._lookup(path.dirname(filepath));
     let basename = path.basename(filepath);
@@ -153,7 +158,7 @@ module.exports = class CacheFS {
       type: "file",
       size: data.length,
       mtimeMs: Date.now(),
-      ino: this.autoinc(),
+      ino,
     };
     let entry = new Map();
     entry.set(STAT, stat);
