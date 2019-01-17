@@ -10,4 +10,10 @@ describe("CacheFS module", () => {
     let text = fs.print(parsed)
     expect(text).toEqual(treeText)
   });
+  it("size()", () => {
+    expect(fs.size()).toEqual(0)
+    fs.loadSuperBlock(treeText)
+    let inodeCount = treeText.trim().split('\n').length
+    expect(fs.size()).toEqual(inodeCount)
+  });
 });

@@ -18,6 +18,32 @@ module.exports = class CacheFS {
       this._root = superblock
     }
   }
+  size () {
+    // subtract 1 to ignore the root directory itself from the count.
+    return this._countInodes(this._root.get("/")) - 1;
+  }
+  _countInodes(map) {
+    let count = 1;
+    for (let [key, val] of map) {
+      if (key === STAT) continue;
+      count += this._countInodes(val);
+    }
+    return count;
+  }
+  autoinc () {
+    console.time('autoinc')
+    let val = this._maxInode(this._root.get("/")) + 1;
+    console.timeEnd('autoinc')
+    return val;
+  }
+  _maxInode(map) {
+    let max = 0;
+    for (let [key, val] of map) {
+      if (key === STAT) continue;
+      max = Math.max(max, val.get(STAT).ino);
+    }
+    return max;
+  }
   print(root = this._root.get("/")) {
     let str = "";
     const printTree = (root, indent) => {
@@ -38,21 +64,17 @@ module.exports = class CacheFS {
     return str;
   }
   parse(print) {
+    let autoinc = 0;
+
     function mk(stat) {
+      const ino = ++autoinc;
       // TODO: Use a better heuristic for determining whether file or dir
-      if (stat.length === 1) {
-        let [mode] = stat
-        mode = parseInt(mode, 8);
-        return new Map([
-          [STAT, { mode, type: "dir", size: 0, mtimeMs: Date.now() }]
-        ]);
-      } else {
-        let [mode, size, mtimeMs] = stat;
-        mode = parseInt(mode, 8);
-        size = parseInt(size);
-        mtimeMs = parseInt(mtimeMs);
-        return new Map([[STAT, { mode, type: "file", size, mtimeMs }]]);
-      }
+      const type = stat.length === 1 ? "dir" : "file"
+      let [mode, size, mtimeMs] = stat;
+      mode = parseInt(mode, 8);
+      size = size ? parseInt(size) : 0;
+      mtimeMs = mtimeMs ? parseInt(mtimeMs) : Date.now();
+      return new Map([[STAT, { mode, type, size, mtimeMs, ino }]]);
     }
 
     let lines = print.trim().split("\n");
@@ -99,6 +121,7 @@ module.exports = class CacheFS {
       type: "dir",
       size: 0,
       mtimeMs: Date.now(),
+      ino: this.autoinc(),
     };
     entry.set(STAT, stat);
     dir.set(basename, entry);
@@ -132,16 +155,28 @@ module.exports = class CacheFS {
       type: "file",
       size: data.length,
       mtimeMs: Date.now(),
+      ino: this.autoinc(),
     };
     let entry = new Map();
     entry.set(STAT, stat);
     dir.set(basename, entry);
+    return stat;
   }
   unlink(filepath) {
     // remove from parent
     let parent = this._lookup(path.dirname(filepath));
     let basename = path.basename(filepath);
     parent.delete(basename);
+  }
+  rename(oldFilepath, newFilepath) {
+    // grab reference
+    let entry = this._lookup(oldFilepath);
+    // remove from parent directory
+    this.unlink(oldFilepath)
+    // insert into new parent directory
+    let dir = this._lookup(path.dirname(newFilepath));
+    let basename = path.basename(newFilepath);
+    dir.set(basename, entry);
   }
   stat(filepath) {
     return this._lookup(filepath).get(STAT);

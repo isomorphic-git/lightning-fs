@@ -88,12 +88,13 @@ module.exports = class FS {
     const { encoding } = opts;
     this.superblockPromise
       .then(() => {
+        let stat
         try {
-          this._cache.stat(filepath);
+          stat = this._cache.stat(filepath);
         } catch (err) {
           return cb(err);
         }
-        this._backend.readFile(filepath)
+        this._backend.readFile(stat.ino)
           .then(data => {
             if (data || !this._fallback) {
               return data
@@ -128,12 +129,13 @@ module.exports = class FS {
     }
     this.superblockPromise
       .then(() => {
+        let stat
         try {
-          this._cache.writeFile(filepath, data, { mode });
+          stat = this._cache.writeFile(filepath, data, { mode });
         } catch (err) {
           return cb(err);
         }
-        this._backend.writeFile(filepath, data)
+        this._backend.writeFile(stat.ino, data)
           .then(() => cb(null))
           .catch(err => cb(err));
       })
@@ -144,12 +146,14 @@ module.exports = class FS {
     [filepath, opts, cb] = this._cleanParams(filepath, opts, cb, stop, true);
     this.superblockPromise
       .then(() => {
+        let stat
         try {
+          stat = this._cache.stat(filepath);
           this._cache.unlink(filepath);
         } catch (err) {
           return cb(err);
         }
-        this._backend.unlink(filepath)
+        this._backend.unlink(stat.ino)
           .then(() => cb(null))
           .catch(cb);
       })
@@ -192,6 +196,18 @@ module.exports = class FS {
       .then(() => {
         try {
           this._cache.rmdir(filepath);
+          return cb(null);
+        } catch (err) {
+          return cb(err);
+        }
+      })
+      .catch(cb);
+  }
+  rename(oldFilepath, newFilepath, cb) {
+    this.superblockPromise
+      .then(() => {
+        try {
+          this._cache.rename(oldFilepath, newFilepath);
           return cb(null);
         } catch (err) {
           return cb(err);
