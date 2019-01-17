@@ -55,6 +55,17 @@ module.exports = class FS {
     });
     return [filepath, opts, cb];
   }
+  _cleanParams2(oldFilepath, newFilepath, cb, stopClock = null, save = false) {
+    oldFilepath = path.normalize(oldFilepath);
+    newFilepath = path.normalize(newFilepath);
+    const _cb = cb;
+    cb = once((...args) => {
+      if (stopClock) stopClock();
+      if (save) this.saveSuperblock();
+      _cb(...args);
+    });
+    return [oldFilepath, newFilepath, cb];
+  }
   _wipe() {
     return this._backend.wipe().then(() => {
       if (this._fallback) {
@@ -205,6 +216,7 @@ module.exports = class FS {
       .catch(cb);
   }
   rename(oldFilepath, newFilepath, cb) {
+    [oldFilepath, newFilepath, cb] = this._cleanParams2(oldFilepath, newFilepath, cb, null, true);
     this.superblockPromise
       .then(() => {
         try {
