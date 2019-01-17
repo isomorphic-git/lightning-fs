@@ -105,6 +105,10 @@ Options object:
 
 Delete a file
 
+### `fs.rename(oldFilepath, newFilepath, cb)`
+
+Rename a file or directory
+
 ### `fs.stat(filepath, opts?, cb)`
 
 The result is a Stat object similar to the one used by Node but with fewer and slightly different properties and methods.
