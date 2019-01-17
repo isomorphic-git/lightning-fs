@@ -31,9 +31,7 @@ module.exports = class CacheFS {
     return count;
   }
   autoinc () {
-    console.time('autoinc')
     let val = this._maxInode(this._root.get("/")) + 1;
-    console.timeEnd('autoinc')
     return val;
   }
   _maxInode(map) {
