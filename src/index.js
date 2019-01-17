@@ -25,13 +25,14 @@ module.exports = class FS {
     } else {
       this.superblockPromise = this._loadSuperblock();
     }
-    // Needed so things don't break if you pass individual functions to `pify` etc
+    // Needed so things don't break if you destructure fs and pass individual functions around
     this.readFile = this.readFile.bind(this)
     this.writeFile = this.writeFile.bind(this)
     this.unlink = this.unlink.bind(this)
     this.mkdir = this.mkdir.bind(this)
     this.rmdir = this.rmdir.bind(this)
     this.readdir = this.readdir.bind(this)
+    this.rename = this.rename.bind(this)
     this.stat = this.stat.bind(this)
     this.lstat = this.lstat.bind(this)
   }
