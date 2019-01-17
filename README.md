@@ -129,6 +129,10 @@ The included methods are:
 - `isDirectory()`
 - `isSymbolicLink()`
 
+### `fs.lstat(filepath, opts?, cb)`
+
+Alias to `fs.stat` for now until symlinks are supported.
+
 ## License
 
 MIT
