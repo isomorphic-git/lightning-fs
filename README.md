@@ -50,19 +50,21 @@ const fs = new FS("testfs")
 ```
 
 Options object:
-| Param | Type [= default] | Description |
-| --- | --- | --- |
-| `wipe` | boolean = false | Delete the database and start with an empty filesystem |
-| `url` | string = undefined | Let `readFile` requests fall back to an HTTP request to this base URL |
+
+| Param  | Type [= default]   | Description                                                           |
+| ------ | ------------------ | --------------------------------------------------------------------- |
+| `wipe` | boolean = false    | Delete the database and start with an empty filesystem                |
+| `url`  | string = undefined | Let `readFile` requests fall back to an HTTP request to this base URL |
 
 ### `fs.mkdir(filepath, opts?, cb)`
 
 Make directory
 
 Options object:
-| Param | Type [= default] | Description |
-| --- | --- | --- |
-| `mode` | number = 0o777  | Posix mode permissions |
+
+| Param  | Type [= default] | Description            |
+| ------ | ---------------- | ---------------------- |
+| `mode` | number = 0o777   | Posix mode permissions |
 
 ### `fs.rmdir(filepath, opts?, cb)`
 
@@ -81,10 +83,11 @@ The callback return value is an Array of strings.
 If `opts` is a string, it is interpreted as `{ encoding: opts }`.
 
 Options object:
-| Param | Type [= default] | Description |
-| --- | --- | --- |
-| `mode` | number = 0o777  | Posix mode permissions |
-| `encoding` || string = undefined | Only supported value is `'utf8'` |
+
+| Param      | Type [= default]   | Description                      |
+| ---------- | ------------------ | -------------------------------- |
+| `mode`     | number = 0o777     | Posix mode permissions           |
+| `encoding` | string = undefined | Only supported value is `'utf8'` |
 
 ### `fs.readFile(filepath, opts?, cb)`
 
@@ -93,9 +96,10 @@ The result value will be a Uint8Array or (if `encoding` is `'utf8'`) a string.
 If `opts` is a string, it is interpreted as `{ encoding: opts }`.
 
 Options object:
-| Param | Type [= default] | Description |
-| --- | --- | --- |
-| `encoding` || string = undefined | Only supported value is `'utf8'` |
+
+| Param      | Type [= default]   | Description                      |
+| ---------- | ------------------ | -------------------------------- |
+| `encoding` | string = undefined | Only supported value is `'utf8'` |
 
 ### `fs.unlink(filepath, opts?, cb)`
 
