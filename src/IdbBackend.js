@@ -5,10 +5,10 @@ module.exports = class IdbBackend {
     this._database = name;
     this._store = new idb.Store(this._database, this._database + "_files");
   }
-  saveSuperblock(superblock) {
+  storeSuperblock(superblock) {
     return idb.set("!root", superblock, this._store);
   }
-  loadSuperblock() {
+  fetchSuperblock() {
     return idb.get("!root", this._store);
   }
   readFile(inode) {

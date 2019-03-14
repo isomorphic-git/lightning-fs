@@ -69,7 +69,7 @@ module.exports = class PromisifiedFS {
   _wipe() {
     return this._idb.wipe().then(() => {
       if (this._http) {
-        return this._http.loadSuperblock().then(text => {
+        return this._http.fetchSuperblock().then(text => {
           if (text) {
             this._cache.loadSuperBlock(text)
           }
@@ -78,14 +78,14 @@ module.exports = class PromisifiedFS {
      }).then(() => this._saveSuperblock());
   }
   _saveSuperblock() {
-    return this._idb.saveSuperblock(this._cache._root);
+    return this._idb.storeSuperblock(this._cache._root);
   }
   _loadSuperblock() {
-    return this._idb.loadSuperblock().then(root => {
+    return this._idb.fetchSuperblock().then(root => {
       if (root) {
         this._cache.loadSuperBlock(root);
       } else if (this._http) {
-        return this._http.loadSuperblock().then(text => {
+        return this._http.fetchSuperblock().then(text => {
           if (text) {
             this._cache.loadSuperBlock(text)
           }

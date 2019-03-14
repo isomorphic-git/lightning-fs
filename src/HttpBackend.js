@@ -2,7 +2,7 @@ module.exports = class HttpBackend {
   constructor(url) {
     this._url = url;
   }
-  loadSuperblock() {
+  fetchSuperblock() {
     return fetch(this._url + '/.superblock.txt').then(res => res.text())
   }
   readFile(filepath) {
