@@ -1,4 +1,4 @@
-const idb = require("idb-keyval");
+const idb = require("@wmhilton/idb-keyval");
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 

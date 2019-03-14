@@ -16,7 +16,7 @@
     "semantic-release": "semantic-release"
   },
   "dependencies": {
-    "idb-keyval": "file:.yalc/idb-keyval",
+    "@wmhilton/idb-keyval": "^3.2.0",
     "isomorphic-textencoder": "1.0.1",
     "just-debounce-it": "1.1.0",
     "just-once": "1.1.0"
