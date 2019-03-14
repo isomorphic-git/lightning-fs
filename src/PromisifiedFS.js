@@ -41,6 +41,16 @@ module.exports = class PromisifiedFS {
       this._http = new HttpBackend(url)
     }
     this._initPromise = this._init()
+    // YES THIS IS A MESS
+    this.readFile = this._wrap(this._readFile.bind(this))
+    this.writeFile = this._wrap(this._writeFile.bind(this))
+    this.unlink = this._wrap(this._unlink.bind(this))
+    this.readdir = this._wrap(this._readdir.bind(this))
+    this.mkdir = this._wrap(this._mkdir.bind(this))
+    this.rmdir = this._wrap(this._rmdir.bind(this))
+    this.rename = this._wrap(this._rename.bind(this))
+    this.stat = this._wrap(this._stat.bind(this))
+    this.lstat = this._wrap(this._lstat.bind(this))
     // Needed so things don't break if you destructure fs and pass individual functions around
     this.readFile = this.readFile.bind(this)
     this.writeFile = this.writeFile.bind(this)
@@ -61,6 +71,7 @@ module.exports = class PromisifiedFS {
     } else {
       await this._loadSuperblock();
     }
+    await this._saveSuperblock();
   }
   async _wipe() {
     await this._idb.wipe()
@@ -70,7 +81,6 @@ module.exports = class PromisifiedFS {
         this._cache.loadSuperBlock(text)
       }
     }
-    await this._saveSuperblock();
   }
   _saveSuperblock() {
     return this._idb.storeSuperblock(this._cache._root);
@@ -84,9 +94,22 @@ module.exports = class PromisifiedFS {
       this._cache.loadSuperBlock(root);
     }
   }
-  async readFile(filepath, opts) {
-    await this._init()
-    await this._loadSuperblock()
+  _wrap (fn) {
+    return async (...args) => {
+      await this._init()
+      await this._loadSuperblock()
+      let data, err
+      try {
+        data = await fn(...args)
+      } catch (e) {
+        err = e
+      }
+      await this._saveSuperblock()
+      if (err) throw err
+      return data
+    }
+  }
+  async _readFile(filepath, opts) {
     ;[filepath, opts] = cleanParams(filepath, opts);
     const { encoding } = opts;
     if (encoding && encoding !== 'utf8') throw new Error('Only "utf8" encoding is supported in readFile');
@@ -100,78 +123,57 @@ module.exports = class PromisifiedFS {
     }
     return data;
   }
-  async writeFile(filepath, data, opts) {
-    await this._init()
-    await this._loadSuperblock()
+  async _writeFile(filepath, data, opts) {
     ;[filepath, opts] = cleanParams(filepath, opts);
     const { mode, encoding = "utf8" } = opts;
     if (typeof data === "string") {
       if (encoding !== "utf8") {
-        return cb(new Error('Only "utf8" encoding is supported in writeFile'));
+        throw new Error('Only "utf8" encoding is supported in writeFile');
       }
       data = encode(data);
     }
     let stat = this._cache.writeFile(filepath, data, { mode });
     await this._idb.writeFile(stat.ino, data)
-    await this._saveSuperblock()
     return null
   }
-  async unlink(filepath, opts) {
-    await this._init()
-    await this._loadSuperblock()
+  async _unlink(filepath, opts) {
     ;[filepath, opts] = cleanParams(filepath, opts);
     let stat = this._cache.stat(filepath);
     this._cache.unlink(filepath);
     await this._idb.unlink(stat.ino)
-    await this._saveSuperblock()
     return null
   }
-  async readdir(filepath, opts) {
-    await this._init()
-    await this._loadSuperblock()
+  async _readdir(filepath, opts) {
     ;[filepath, opts] = cleanParams(filepath, opts);
     let data = this._cache.readdir(filepath);
     return data
   }
-  async mkdir(filepath, opts) {
-    await this._init()
-    await this._loadSuperblock()
+  async _mkdir(filepath, opts) {
     ;[filepath, opts] = cleanParams(filepath, opts);
     const { mode = 0o777 } = opts;
     await this._cache.mkdir(filepath, { mode });
-    await this._saveSuperblock()
     return null
   }
-  async rmdir(filepath, opts) {
-    await this._init()
-    await this._loadSuperblock()
+  async _rmdir(filepath, opts) {
     ;[filepath, opts] = cleanParams(filepath, opts);
     // Never allow deleting the root directory.
     if (filepath === "/") {
       throw new ENOTEMPTY();
     }
     this._cache.rmdir(filepath);
-    await this._saveSuperblock()
     return null;
   }
-  async rename(oldFilepath, newFilepath) {
-    await this._init()
-    await this._loadSuperblock()
+  async _rename(oldFilepath, newFilepath) {
     ;[oldFilepath, newFilepath] = cleanParams2(oldFilepath, newFilepath);
     this._cache.rename(oldFilepath, newFilepath);
-    await this._saveSuperblock()
     return null;
   }
-  async stat(filepath, opts) {
-    await this._init()
-    await this._loadSuperblock()
+  async _stat(filepath, opts) {
     ;[filepath, opts] = cleanParams(filepath, opts);
     let data = this._cache.stat(filepath);
     return new Stat(data);
   }
-  async lstat(filepath, opts) {
-    await this._init()
-    await this._loadSuperblock()
+  async _lstat(filepath, opts) {
     return this.stat(filepath, opts);
   }
   readlink() {}
