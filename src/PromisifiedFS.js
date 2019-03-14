@@ -1,5 +1,4 @@
 const { encode, decode } = require("isomorphic-textencoder");
-const debounce = require("just-debounce-it");
 
 const Stat = require("./Stat.js");
 const CacheFS = require("./CacheFS.js");
@@ -38,9 +37,6 @@ module.exports = class PromisifiedFS {
     this._idb = new IdbBackend(name);
     this._cache = new CacheFS(name);
     this._opts = { wipe, url };
-    this.saveSuperblock = debounce(() => {
-      this._saveSuperblock();
-    }, 500);
     if (url) {
       this._http = new HttpBackend(url)
     }

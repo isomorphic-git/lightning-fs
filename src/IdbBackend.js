@@ -4,12 +4,33 @@ module.exports = class IdbBackend {
   constructor(name) {
     this._database = name;
     this._store = new idb.Store(this._database, this._database + "_files");
+    this._saving = Promise.resolve()
+    this._fetching = Promise.resolve()
   }
-  storeSuperblock(superblock) {
-    return idb.set("!root", superblock, this._store);
+  async storeSuperblock(superblock) {
+    await this._fetching
+    let done
+    this._saving = new Promise(resolve => { done = resolve })
+    await idb.set("!root", superblock, this._store);
+    await idb.del("!locked", this._store);
+    done()
   }
-  fetchSuperblock() {
-    return idb.get("!root", this._store);
+  async fetchSuperblock() {
+    await this._saving
+    let done
+    this._fetching = new Promise(resolve => { done = resolve })
+    let locked = true
+    await idb.update("!locked", value => {
+      locked = value
+      if (value) {
+        return value
+      } else {
+        return true
+      }
+    }, this._store);
+    let root = await idb.get("!root", this._store);
+    done()
+    return root
   }
   readFile(inode) {
     return idb.get(inode, this._store)
