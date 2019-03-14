@@ -1,0 +1,16 @@
+<script type="module">
+import { update } from "../dist/idb-keyval.mjs";
+
+let worker = new Worker('./worker.js', { type: 'module' });
+
+update("lock", value => {
+  if (value === undefined) {
+    console.log('LOCKED BY MAIN')
+    return "LOCKED BY MAIN"
+  } else {
+    console.log(value)
+    return value;
+  }
+})
+
+</script>
