@@ -35,13 +35,13 @@ function cleanParams2(oldFilepath, newFilepath) {
 
 module.exports = class PromisifiedFS {
   constructor(name, { wipe, url } = {}) {
-    this._backend = new IdbBackend(name);
+    this._idb = new IdbBackend(name);
     this._cache = new CacheFS(name);
     this.saveSuperblock = debounce(() => {
       this._saveSuperblock();
     }, 500);
     if (url) {
-      this._fallback = new HttpBackend(url)
+      this._http = new HttpBackend(url)
     }
     if (wipe) {
       this.superblockPromise = this._wipe();
@@ -62,9 +62,9 @@ module.exports = class PromisifiedFS {
     this.symlink = this.symlink.bind(this)
   }
   _wipe() {
-    return this._backend.wipe().then(() => {
-      if (this._fallback) {
-        return this._fallback.loadSuperblock().then(text => {
+    return this._idb.wipe().then(() => {
+      if (this._http) {
+        return this._http.loadSuperblock().then(text => {
           if (text) {
             this._cache.loadSuperBlock(text)
           }
@@ -73,14 +73,14 @@ module.exports = class PromisifiedFS {
      }).then(() => this._saveSuperblock());
   }
   _saveSuperblock() {
-    return this._backend.saveSuperblock(this._cache._root);
+    return this._idb.saveSuperblock(this._cache._root);
   }
   _loadSuperblock() {
-    return this._backend.loadSuperblock().then(root => {
+    return this._idb.loadSuperblock().then(root => {
       if (root) {
         this._cache.loadSuperBlock(root);
-      } else if (this._fallback) {
-        return this._fallback.loadSuperblock().then(text => {
+      } else if (this._http) {
+        return this._http.loadSuperblock().then(text => {
           if (text) {
             this._cache.loadSuperBlock(text)
           }
@@ -94,9 +94,9 @@ module.exports = class PromisifiedFS {
     if (encoding && encoding !== 'utf8') throw new Error('Only "utf8" encoding is supported in readFile');
     await this.superblockPromise
     const stat = this._cache.stat(filepath);
-    let data = await this._backend.readFile(stat.ino)
-    if (!data && this._fallback) {
-      data = await this._fallback.readFile(filepath)
+    let data = await this._idb.readFile(stat.ino)
+    if (!data && this._http) {
+      data = await this._http.readFile(filepath)
     }
     if (data && encoding === "utf8") {
         data = decode(data);
@@ -114,7 +114,7 @@ module.exports = class PromisifiedFS {
     }
     await this.superblockPromise
     let stat = this._cache.writeFile(filepath, data, { mode });
-    await this._backend.writeFile(stat.ino, data)
+    await this._idb.writeFile(stat.ino, data)
     return null
   }
   async unlink(filepath, opts) {
@@ -122,7 +122,7 @@ module.exports = class PromisifiedFS {
     await this.superblockPromise
     let stat = this._cache.stat(filepath);
     this._cache.unlink(filepath);
-    await this._backend.unlink(stat.ino)
+    await this._idb.unlink(stat.ino)
     return null
   }
   async readdir(filepath, opts) {
