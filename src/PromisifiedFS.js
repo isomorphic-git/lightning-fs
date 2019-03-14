@@ -35,17 +35,14 @@ module.exports = class PromisifiedFS {
   constructor(name, { wipe, url } = {}) {
     this._idb = new IdbBackend(name);
     this._cache = new CacheFS(name);
+    this._opts = { wipe, url };
     this.saveSuperblock = debounce(() => {
       this._saveSuperblock();
     }, 500);
     if (url) {
       this._http = new HttpBackend(url)
     }
-    if (wipe) {
-      this.superblockPromise = this._wipe();
-    } else {
-      this.superblockPromise = this._loadSuperblock();
-    }
+    this._initPromise = this._init()
     // Needed so things don't break if you destructure fs and pass individual functions around
     this.readFile = this.readFile.bind(this)
     this.writeFile = this.writeFile.bind(this)
@@ -58,6 +55,14 @@ module.exports = class PromisifiedFS {
     this.lstat = this.lstat.bind(this)
     this.readlink = this.readlink.bind(this)
     this.symlink = this.symlink.bind(this)
+  }
+  async _init() {
+    if (this._initPromise) return this._initPromise
+    if (this._opts.wipe) {
+      await this._wipe();
+    } else {
+      await this._loadSuperblock();
+    }
   }
   _wipe() {
     return this._idb.wipe().then(() => {
@@ -87,10 +92,10 @@ module.exports = class PromisifiedFS {
     });
   }
   async readFile(filepath, opts) {
+    await this._init()
     ;[filepath, opts] = cleanParams(filepath, opts);
     const { encoding } = opts;
     if (encoding && encoding !== 'utf8') throw new Error('Only "utf8" encoding is supported in readFile');
-    await this.superblockPromise
     const stat = this._cache.stat(filepath);
     let data = await this._idb.readFile(stat.ino)
     if (!data && this._http) {
@@ -102,6 +107,7 @@ module.exports = class PromisifiedFS {
     return data;
   }
   async writeFile(filepath, data, opts) {
+    await this._init()
     ;[filepath, opts] = cleanParams(filepath, opts);
     const { mode, encoding = "utf8" } = opts;
     if (typeof data === "string") {
@@ -110,67 +116,66 @@ module.exports = class PromisifiedFS {
       }
       data = encode(data);
     }
-    await this.superblockPromise
     const stat = this._cache.writeFile(filepath, data, { mode });
     await this._idb.writeFile(stat.ino, data)
     return null
   }
   async unlink(filepath, opts) {
+    await this._init()
     ;[filepath, opts] = cleanParams(filepath, opts);
-    await this.superblockPromise
     const stat = this._cache.stat(filepath);
     this._cache.unlink(filepath);
     await this._idb.unlink(stat.ino)
     return null
   }
   async readdir(filepath, opts) {
+    await this._init()
     ;[filepath, opts] = cleanParams(filepath, opts);
-    await this.superblockPromise
     return this._cache.readdir(filepath);
   }
   async mkdir(filepath, opts) {
+    await this._init()
     ;[filepath, opts] = cleanParams(filepath, opts);
     const { mode = 0o777 } = opts;
-    await this.superblockPromise
     await this._cache.mkdir(filepath, { mode });
     return null
   }
   async rmdir(filepath, opts) {
+    await this._init()
     ;[filepath, opts] = cleanParams(filepath, opts);
     // Never allow deleting the root directory.
     if (filepath === "/") {
       throw new ENOTEMPTY();
     }
-    await this.superblockPromise
     this._cache.rmdir(filepath);
     return null;
   }
   async rename(oldFilepath, newFilepath) {
+    await this._init()
     ;[oldFilepath, newFilepath] = cleanParams2(oldFilepath, newFilepath);
-    await this.superblockPromise
     this._cache.rename(oldFilepath, newFilepath);
     return null;
   }
   async stat(filepath, opts) {
+    await this._init()
     ;[filepath, opts] = cleanParams(filepath, opts);
-    await this.superblockPromise
     const data = this._cache.stat(filepath);
     return new Stat(data);
   }
   async lstat(filepath, opts) {
+    await this._init()
     ;[filepath, opts] = cleanParams(filepath, opts);
-    await this.superblockPromise
     let data = this._cache.lstat(filepath);
     return new Stat(data);
   }
   async readlink(filepath, opts) {
+    await this._init()
     ;[filepath, opts] = cleanParams(filepath, opts);
-    await this.superblockPromise
     return this._cache.readlink(filepath);
   }
   async symlink(target, filepath) {
+    await this._init()
     ;[target, filepath] = cleanParams2(target, filepath);
-    await this.superblockPromise
     this._cache.symlink(target, filepath);
     return null;
   }
