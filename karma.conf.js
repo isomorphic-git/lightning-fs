@@ -77,9 +77,9 @@ module.exports = function (config) {
         base: 'SauceLabs',
         deviceName: 'iPhone X Simulator',
         platformName: 'iOS',
-        platformVersion: '11.2',
+        platformVersion: '11.3',
         browserName: 'Safari',
-        appiumVersion: '1.7.2'
+        appiumVersion: '1.9.1'
       },
       sl_android_chrome: {
         base: 'SauceLabs',
