@@ -18,6 +18,9 @@ module.exports = class CacheFS {
       this._root = superblock
     }
   }
+  unloadSuperBlock() {
+    this._root = null
+  }
   size () {
     // subtract 1 to ignore the root directory itself from the count.
     return this._countInodes(this._root.get("/")) - 1;
