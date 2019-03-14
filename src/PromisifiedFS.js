@@ -66,32 +66,27 @@ module.exports = class PromisifiedFS {
       await this._loadSuperblock();
     }
   }
-  _wipe() {
-    return this._idb.wipe().then(() => {
-      if (this._http) {
-        return this._http.fetchSuperblock().then(text => {
-          if (text) {
-            this._cache.loadSuperBlock(text)
-          }
-        })
+  async _wipe() {
+    await this._idb.wipe()
+    if (this._http) {
+      const text = await this._http.fetchSuperblock()
+      if (text) {
+        this._cache.loadSuperBlock(text)
       }
-     }).then(() => this._saveSuperblock());
+    }
+    await this._saveSuperblock();
   }
   _saveSuperblock() {
     return this._idb.storeSuperblock(this._cache._root);
   }
-  _loadSuperblock() {
-    return this._idb.fetchSuperblock().then(root => {
-      if (root) {
-        this._cache.loadSuperBlock(root);
-      } else if (this._http) {
-        return this._http.fetchSuperblock().then(text => {
-          if (text) {
-            this._cache.loadSuperBlock(text)
-          }
-        })
-      }
-    });
+  async _loadSuperblock() {
+    let root = await this._idb.fetchSuperblock()
+    if (!root && this._http) {
+      root = await this._http.fetchSuperblock()
+    }
+    if (root) {
+      this._cache.loadSuperBlock(root);
+    }
   }
   async readFile(filepath, opts) {
     await this._init()
