@@ -114,7 +114,6 @@ module.exports = class CacheFS {
           let target = stat.target
           if (!target.startsWith('/')) {
             target = path.normalize(path.join(partialPath, target))
-            console.log('TARGET', target)
           }
           dir = this._lookup(target)
         }

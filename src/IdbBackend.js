@@ -42,7 +42,7 @@ module.exports = class IdbBackend {
         } else {
           // auto-expire locks after 24 hours
           if (value < (new Date().valueOf() - 24 * 60 * 60 * 1000)) {
-            console.log('lock is expired')
+            // console.log('lock is expired')
             value = undefined
           }
           // console.log(`${iam} ${call} denied`)
