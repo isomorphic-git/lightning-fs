@@ -292,6 +292,25 @@ describe("fs module", () => {
         });
       });
     });
+    it("symlink a file and read/write to it (relative)", done => {
+      fs.mkdir("/symlink", () => {
+        fs.writeFile("/symlink/a.txt", "hello", () => {
+          fs.symlink("a.txt", "/symlink/b.txt", () => {
+            fs.readFile("/symlink/b.txt", "utf8", (err, data) => {
+              expect(err).toBe(null)
+              expect(data).toBe("hello")
+              fs.writeFile("/symlink/b.txt", "world", () => {
+                fs.readFile("/symlink/a.txt", "utf8", (err, data) => {
+                  expect(err).toBe(null)
+                  expect(data).toBe("world");
+                  done();
+                })
+              })
+            });
+          });
+        });
+      });
+    });
     it("symlink a directory and read/write to it", done => {
       fs.mkdir("/symlink", () => {
         fs.mkdir("/symlink/a", () => {
@@ -310,6 +329,33 @@ describe("fs module", () => {
                       done();
                     })
                   })
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+    it("symlink a directory and read/write to it (relative)", done => {
+      fs.mkdir("/symlink", () => {
+        fs.mkdir("/symlink/a", () => {
+          fs.mkdir("/symlink/b", () => {
+            fs.writeFile("/symlink/a/file.txt", "data", () => {
+              fs.symlink("../a", "/symlink/b/c", () => {
+                fs.readdir("/symlink/b/c", (err, data) => {
+                  expect(err).toBe(null)
+                  expect(data.includes("file.txt")).toBe(true);
+                  fs.readFile("/symlink/b/c/file.txt", "utf8", (err, data) => {
+                    expect(err).toBe(null)
+                    expect(data).toBe("data")
+                    fs.writeFile("/symlink/b/c/file2.txt", "world", () => {
+                      fs.readFile("/symlink/a/file2.txt", "utf8", (err, data) => {
+                        expect(err).toBe(null);
+                        expect(data).toBe("world");
+                        done();
+                      })
+                    })
+                  });
                 });
               });
             });

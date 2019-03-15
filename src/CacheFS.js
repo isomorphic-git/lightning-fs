@@ -103,6 +103,7 @@ module.exports = class CacheFS {
   }
   _lookup(filepath, follow = true) {
     let dir = this._root;
+    let partialPath = '/'
     for (let part of path.split(filepath)) {
       dir = dir.get(part);
       if (!dir) throw new ENOENT(filepath);
@@ -110,7 +111,17 @@ module.exports = class CacheFS {
       if (follow) {
         const stat = dir.get(STAT)
         if (stat.type === 'symlink') {
-          dir = this._lookup(stat.target)
+          let target = stat.target
+          if (!target.startsWith('/')) {
+            target = path.normalize(path.join(partialPath, target))
+            console.log('TARGET', target)
+          }
+          dir = this._lookup(target)
+        }
+        if (!partialPath) {
+          partialPath = part
+        } else {
+          partialPath = path.join(partialPath, part)
         }
       }
     }

@@ -23,7 +23,7 @@ module.exports = class IdbBackend {
       await idb.set("!root", superblock, this._store);
       await idb.del("!locked", this._store);
       this._saving = null
-      console.log(`${iam} released lock`)
+      // console.log(`${iam} released lock`)
       done()
     }, 500)
   }

@@ -268,6 +268,23 @@ describe("fs.promises module", () => {
         });
       });
     });
+    it("symlink a file and read/write to it (relative)", done => {
+      fs.mkdir("/symlink").finally(() => {
+        fs.writeFile("/symlink/a.txt", "hello").then(() => {
+          fs.symlink("a.txt", "/symlink/b.txt").then(() => {
+            fs.readFile("/symlink/b.txt", "utf8").then(data => {
+              expect(data).toBe("hello")
+              fs.writeFile("/symlink/b.txt", "world").then(() => {
+                fs.readFile("/symlink/a.txt", "utf8").then(data => {
+                  expect(data).toBe("world");
+                  done();
+                })
+              })
+            });
+          }).catch(console.log);
+        });
+      });
+    });
     it("symlink a directory and read/write to it", done => {
       fs.mkdir("/symlink").finally(() => {
         fs.mkdir("/symlink/a").finally(() => {
@@ -283,6 +300,30 @@ describe("fs.promises module", () => {
                       done();
                     })
                   })
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+    it("symlink a directory and read/write to it (relative)", done => {
+      fs.mkdir("/symlink").finally(() => {
+        fs.mkdir("/symlink/a").finally(() => {
+          fs.mkdir("/symlink/b").finally(() => {
+            fs.writeFile("/symlink/a/file.txt", "data").then(() => {
+              fs.symlink("../a", "/symlink/b/c").then(() => {
+                fs.readdir("/symlink/b/c").then(data => {
+                  expect(data.includes("file.txt")).toBe(true);
+                  fs.readFile("/symlink/b/c/file.txt", "utf8").then(data => {
+                    expect(data).toBe("data")
+                    fs.writeFile("/symlink/b/c/file2.txt", "world").then(() => {
+                      fs.readFile("/symlink/a/file2.txt", "utf8").then(data => {
+                        expect(data).toBe("world");
+                        done();
+                      })
+                    })
+                  });
                 });
               });
             });
