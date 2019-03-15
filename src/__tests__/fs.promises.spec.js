@@ -4,6 +4,8 @@ const fs = new FS("testfs", { wipe: true }).promises;
 
 const HELLO = new Uint8Array([72, 69, 76, 76, 79]);
 
+jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
+
 describe("fs.promises module", () => {
   describe("mkdir", () => {
     it("root directory already exists", (done) => {

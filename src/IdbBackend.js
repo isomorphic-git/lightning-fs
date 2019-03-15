@@ -10,21 +10,27 @@ module.exports = class IdbBackend {
     this._store = new idb.Store(this._database, this._database + "_files");
     this._saving = null
     this._fetching = null
+    this._timeout
   }
   async storeSuperblock(superblock) {
+    this._cache = superblock
     await this._fetching
-    if (this._saving) return this._saving
-    let done
-    this._saving = new Promise(resolve => { done = resolve })
-    await idb.set("!root", superblock, this._store);
-    await idb.del("!locked", this._store);
-    // console.log(`${iam} released lock`)
-    done()
-    this._saving = null
+    clearTimeout(this._timeout)
+    this._timeout = setTimeout(async () => {
+      let done
+      this._saving = new Promise(resolve => { done = resolve })
+      this._cache = null
+      await idb.set("!root", superblock, this._store);
+      await idb.del("!locked", this._store);
+      this._saving = null
+      console.log(`${iam} released lock`)
+      done()
+    }, 500)
   }
   async fetchSuperblock() {
     await this._saving
     if (this._fetching) return this._fetching
+    if (this._cache) return this._cache
     let done
     this._fetching = new Promise(resolve => { done = resolve })
     let locked = true
@@ -34,18 +40,24 @@ module.exports = class IdbBackend {
         if (value === undefined) {
           // console.log(`${iam} ${call} grabs the lock`)
         } else {
+          // auto-expire locks after 24 hours
+          if (value < (new Date().valueOf() - 24 * 60 * 60 * 1000)) {
+            console.log('lock is expired')
+            value = undefined
+          }
           // console.log(`${iam} ${call} denied`)
         }
         locked = value
         if (value) {
           return value
         } else {
-          return true
+          return new Date().valueOf()
         }
       }, this._store);
       if (locked) await sleep(10)
     }
     let root = await idb.get("!root", this._store);
+    this._cache = root
     done(root)
     this._fetching = null
     return root
