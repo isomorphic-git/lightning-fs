@@ -6,10 +6,7 @@ function wrapCallback (opts, cb) {
   if (typeof opts === "function") {
     cb = opts;
   }
-  const _cb = cb;
-  cb = once((...args) => {
-    _cb(...args);
-  });
+  cb = once(cb);
   const resolve = (...args) => cb(null, ...args)
   return [resolve, cb];
 }

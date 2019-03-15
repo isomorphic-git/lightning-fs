@@ -6,10 +6,24 @@ const HELLO = new Uint8Array([72, 69, 76, 76, 79]);
 
 jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
 
-describe("fs.promises module", () => {
+describe("promises module", () => {
+  const {
+    mkdir,
+    readdir,
+    rmdir,
+    writeFile,
+    readFile,
+    unlink,
+    stat,
+    rename,
+    lstat,
+    symlink,
+    readlink
+  } = fs;
+
   describe("mkdir", () => {
     it("root directory already exists", (done) => {
-      fs.mkdir("/").catch(err => {
+      mkdir("/").catch(err => {
         expect(err).not.toBe(null);
         console.log(err)
         expect(err.code).toEqual("EEXIST");
@@ -17,9 +31,9 @@ describe("fs.promises module", () => {
       });
     });
     it("create empty directory", done => {
-      fs.mkdir("/mkdir-test")
+      mkdir("/mkdir-test")
       .then(() => {
-        fs.stat("/mkdir-test").then(stat => {
+        stat("/mkdir-test").then(stat => {
           done();
         });
       })
@@ -32,9 +46,9 @@ describe("fs.promises module", () => {
 
   describe("writeFile", () => {
     it("create file", done => {
-      fs.mkdir("/writeFile").finally(() => {
-        fs.writeFile("/writeFile/writeFile-uint8.txt", HELLO).then(() => {
-          fs.stat("/writeFile/writeFile-uint8.txt").then(stats => {
+      mkdir("/writeFile").finally(() => {
+        writeFile("/writeFile/writeFile-uint8.txt", HELLO).then(() => {
+          stat("/writeFile/writeFile-uint8.txt").then(stats => {
             expect(stats.size).toEqual(5);
             done();
           });
@@ -42,9 +56,9 @@ describe("fs.promises module", () => {
       });
     });
     it("create file (from string)", done => {
-      fs.mkdir("/writeFile").finally(() => {
-        fs.writeFile("/writeFile/writeFile-string.txt", "HELLO").then(() => {
-          fs.stat("/writeFile/writeFile-string.txt").then(stats => {
+      mkdir("/writeFile").finally(() => {
+        writeFile("/writeFile/writeFile-string.txt", "HELLO").then(() => {
+          stat("/writeFile/writeFile-string.txt").then(stats => {
             expect(stats.size).toEqual(5);
             done();
           });
@@ -52,12 +66,12 @@ describe("fs.promises module", () => {
       });
     });
     it("write file perserves old inode", done => {
-      fs.mkdir("/writeFile").finally(() => {
-        fs.writeFile("/writeFile/writeFile-inode.txt", "HELLO").then(() => {
-          fs.stat("/writeFile/writeFile-inode.txt").then(stats => {
+      mkdir("/writeFile").finally(() => {
+        writeFile("/writeFile/writeFile-inode.txt", "HELLO").then(() => {
+          stat("/writeFile/writeFile-inode.txt").then(stats => {
             let inode = stats.ino;
-            fs.writeFile("/writeFile/writeFile-inode.txt", "WORLD").then(() => {
-              fs.stat("/writeFile/writeFile-inode.txt").then(stats => {
+            writeFile("/writeFile/writeFile-inode.txt", "WORLD").then(() => {
+              stat("/writeFile/writeFile-inode.txt").then(stats => {
                 expect(stats.ino).toEqual(inode);
                 done();
               });
@@ -70,15 +84,15 @@ describe("fs.promises module", () => {
 
   describe("readFile", () => {
     it("read non-existant file throws", done => {
-      fs.readFile("/readFile/non-existant.txt").catch(err => {
+      readFile("/readFile/non-existant.txt").catch(err => {
         expect(err).not.toBe(null);
         done();
       });
     });
     it("read file", done => {
-      fs.mkdir("/readFile").finally(() => {
-        fs.writeFile("/readFile/readFile-uint8.txt", "HELLO").then(() => {
-          fs.readFile("/readFile/readFile-uint8.txt").then(data => {
+      mkdir("/readFile").finally(() => {
+        writeFile("/readFile/readFile-uint8.txt", "HELLO").then(() => {
+          readFile("/readFile/readFile-uint8.txt").then(data => {
             // instanceof comparisons on Uint8Array's retrieved from IDB are broken in Safari Mobile 11.x (source: https://github.com/dfahlander/Dexie.js/issues/656#issuecomment-391866600)
             expect([...data]).toEqual([...HELLO]);
             done();
@@ -87,9 +101,9 @@ describe("fs.promises module", () => {
       });
     });
     it("read file (encoding shorthand)", done => {
-      fs.mkdir("/readFile").finally(() => {
-        fs.writeFile("/readFile/readFile-encoding-shorthand.txt", "HELLO").then(() => {
-          fs.readFile("/readFile/readFile-encoding-shorthand.txt", "utf8").then(data => {
+      mkdir("/readFile").finally(() => {
+        writeFile("/readFile/readFile-encoding-shorthand.txt", "HELLO").then(() => {
+          readFile("/readFile/readFile-encoding-shorthand.txt", "utf8").then(data => {
             expect(data).toEqual("HELLO");
             done();
           });
@@ -97,9 +111,9 @@ describe("fs.promises module", () => {
       });
     });
     it("read file (encoding longhand)", done => {
-      fs.mkdir("/readFile").finally(() => {
-        fs.writeFile("/readFile/readFile-encoding-longhand.txt", "HELLO").then(() => {
-          fs.readFile("/readFile/readFile-encoding-longhand.txt", { encoding: "utf8" }).then(data => {
+      mkdir("/readFile").finally(() => {
+        writeFile("/readFile/readFile-encoding-longhand.txt", "HELLO").then(() => {
+          readFile("/readFile/readFile-encoding-longhand.txt", { encoding: "utf8" }).then(data => {
             expect(data).toEqual("HELLO");
             done();
           });
@@ -110,23 +124,23 @@ describe("fs.promises module", () => {
 
   describe("readdir", () => {
     it("read non-existant dir returns undefined", done => {
-      fs.readdir("/readdir/non-existant").catch(err => {
+      readdir("/readdir/non-existant").catch(err => {
         expect(err).not.toBe(null);
         done();
       });
     });
     it("read root directory", done => {
-      fs.mkdir("/readdir").finally(() => {
-        fs.readdir("/").then(data => {
+      mkdir("/readdir").finally(() => {
+        readdir("/").then(data => {
           expect(data.includes("readdir")).toBe(true);
           done();
         });
       });
     });
     it("read child directory", done => {
-      fs.mkdir("/readdir").finally(() => {
-        fs.writeFile("/readdir/1.txt", "").then(() => {
-          fs.readdir("/readdir").then(data => {
+      mkdir("/readdir").finally(() => {
+        writeFile("/readdir/1.txt", "").then(() => {
+          readdir("/readdir").then(data => {
             expect(data).toEqual(["1.txt"])
             done();
           });
@@ -137,25 +151,25 @@ describe("fs.promises module", () => {
 
   describe("rmdir", () => {
     it("delete root directory fails", done => {
-      fs.rmdir("/").catch(err => {
+      rmdir("/").catch(err => {
         expect(err).not.toBe(null);
         expect(err.code).toEqual("ENOTEMPTY");
         done();
       });
     });
     it("delete non-existant directory fails", done => {
-      fs.rmdir("/rmdir/non-existant").catch(err => {
+      rmdir("/rmdir/non-existant").catch(err => {
         expect(err).not.toBe(null);
         expect(err.code).toEqual("ENOENT");
         done();
       });
     });
     it("delete non-empty directory fails", done => {
-      fs.mkdir("/rmdir").finally(() => {
-        fs.mkdir("/rmdir/not-empty").finally(() => {
-          fs.writeFile("/rmdir/not-empty/file.txt", "").then(() => {
+      mkdir("/rmdir").finally(() => {
+        mkdir("/rmdir/not-empty").finally(() => {
+          writeFile("/rmdir/not-empty/file.txt", "").then(() => {
 
-            fs.rmdir("/rmdir/not-empty").catch(err => {
+            rmdir("/rmdir/not-empty").catch(err => {
               expect(err).not.toBe(null);
               expect(err.code).toEqual("ENOTEMPTY");
               done();
@@ -165,12 +179,12 @@ describe("fs.promises module", () => {
       })
     });
     it("delete empty directory", done => {
-      fs.mkdir("/rmdir").finally(() => {
-        fs.mkdir("/rmdir/empty").finally(() => {
-          fs.readdir("/rmdir").then(data => {
+      mkdir("/rmdir").finally(() => {
+        mkdir("/rmdir/empty").finally(() => {
+          readdir("/rmdir").then(data => {
             let originalSize = data.length;
-            fs.rmdir("/rmdir/empty").then(() => {
-              fs.readdir("/rmdir").then(data => {
+            rmdir("/rmdir/empty").then(() => {
+              readdir("/rmdir").then(data => {
                 expect(data.length === originalSize - 1);
                 expect(data.includes("empty")).toBe(false);
                 done();
@@ -184,15 +198,15 @@ describe("fs.promises module", () => {
 
   describe("unlink", () => {
     it("create and delete file", done => {
-      fs.mkdir("/unlink").finally(() => {
-        fs.writeFile("/unlink/file.txt", "").then(() => {
-          fs.readdir("/unlink").then(data => {
+      mkdir("/unlink").finally(() => {
+        writeFile("/unlink/file.txt", "").then(() => {
+          readdir("/unlink").then(data => {
             let originalSize = data.length;
-            fs.unlink("/unlink/file.txt").then(() => {
-              fs.readdir("/unlink").then(data => {
+            unlink("/unlink/file.txt").then(() => {
+              readdir("/unlink").then(data => {
                 expect(data.length).toBe(originalSize - 1)
                 expect(data.includes("file.txt")).toBe(false);
-                fs.readFile("/unlink/file.txt").catch(err => {
+                readFile("/unlink/file.txt").catch(err => {
                   expect(err).not.toBe(null)
                   expect(err.code).toBe("ENOENT")
                   done();
@@ -207,16 +221,16 @@ describe("fs.promises module", () => {
 
   describe("rename", () => {
     it("create and rename file", done => {
-      fs.mkdir("/rename").finally(() => {
-        fs.writeFile("/rename/a.txt", "").then(() => {
-          fs.rename("/rename/a.txt", "/rename/b.txt").then(() => {
-            fs.readdir("/rename").then(data => {
+      mkdir("/rename").finally(() => {
+        writeFile("/rename/a.txt", "").then(() => {
+          rename("/rename/a.txt", "/rename/b.txt").then(() => {
+            readdir("/rename").then(data => {
               expect(data.includes("a.txt")).toBe(false);
               expect(data.includes("b.txt")).toBe(true);
-              fs.readFile("/rename/a.txt").catch(err => {
+              readFile("/rename/a.txt").catch(err => {
                 expect(err).not.toBe(null)
                 expect(err.code).toBe("ENOENT")
-                fs.readFile("/rename/b.txt", "utf8").then(data => {
+                readFile("/rename/b.txt", "utf8").then(data => {
                   expect(data).toBe("")
                   done();
                 });
@@ -227,17 +241,17 @@ describe("fs.promises module", () => {
       });
     });
     it("create and rename directory", done => {
-      fs.mkdir("/rename").finally(() => {
-        fs.mkdir("/rename/a").finally(() => {
-          fs.writeFile("/rename/a/file.txt", "").then(() => {
-            fs.rename("/rename/a", "/rename/b").then(() => {
-              fs.readdir("/rename").then(data => {
+      mkdir("/rename").finally(() => {
+        mkdir("/rename/a").finally(() => {
+          writeFile("/rename/a/file.txt", "").then(() => {
+            rename("/rename/a", "/rename/b").then(() => {
+              readdir("/rename").then(data => {
                 expect(data.includes("a")).toBe(false);
                 expect(data.includes("b")).toBe(true);
-                fs.readFile("/rename/a/file.txt").catch(err => {
+                readFile("/rename/a/file.txt").catch(err => {
                   expect(err).not.toBe(null)
                   expect(err.code).toBe("ENOENT")
-                  fs.readFile("/rename/b/file.txt", "utf8").then(data => {
+                  readFile("/rename/b/file.txt", "utf8").then(data => {
                     expect(data).toBe("")
                     done();
                   });

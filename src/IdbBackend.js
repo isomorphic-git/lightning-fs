@@ -12,6 +12,9 @@ module.exports = class IdbBackend {
     this._fetching = null
     this._timeout
   }
+  async overrideLock () {
+    return idb.del("!locked", this._store);
+  }
   async storeSuperblock(superblock) {
     this._cache = superblock
     await this._fetching
@@ -23,7 +26,6 @@ module.exports = class IdbBackend {
       await idb.set("!root", superblock, this._store);
       await idb.del("!locked", this._store);
       this._saving = null
-      console.log(`${iam} released lock`)
       done()
     }, 500)
   }
@@ -34,18 +36,13 @@ module.exports = class IdbBackend {
     let done
     this._fetching = new Promise(resolve => { done = resolve })
     let locked = true
-    let call = Math.random()
     while(locked) {
       await idb.update("!locked", value => {
-        if (value === undefined) {
-          // console.log(`${iam} ${call} grabs the lock`)
-        } else {
+        if (value) {
           // auto-expire locks after 24 hours
           if (value < (new Date().valueOf() - 24 * 60 * 60 * 1000)) {
-            console.log('lock is expired')
             value = undefined
           }
-          // console.log(`${iam} ${call} denied`)
         }
         locked = value
         if (value) {
