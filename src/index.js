@@ -64,8 +64,14 @@ module.exports = class FS {
   }
   lstat(filepath, opts, cb) {
     const [resolve, reject] = wrapCallback(opts, cb);
-    this.promises.stat(filepath).then(resolve).catch(reject);
+    this.promises.lstat(filepath).then(resolve).catch(reject);
   }
-  readlink() {}
-  symlink() {}
+  readlink(filepath, opts, cb) {
+    const [resolve, reject] = wrapCallback(opts, cb);
+    this.promises.readlink(filepath, opts).then(resolve).catch(reject);
+  }
+  symlink(target, filepath, opts, cb) {
+    const [resolve, reject] = wrapCallback(opts, cb);
+    this.promises.symlink(target, filepath, opts).then(resolve).catch(reject);
+  }
 }

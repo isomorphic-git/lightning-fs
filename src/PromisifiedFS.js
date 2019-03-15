@@ -51,6 +51,8 @@ module.exports = class PromisifiedFS {
     this.rename = this._wrap(this._rename.bind(this))
     this.stat = this._wrap(this._stat.bind(this))
     this.lstat = this._wrap(this._lstat.bind(this))
+    this.readlink = this._wrap(this._readlink.bind(this))
+    this.symlink = this._wrap(this._symlink.bind(this))
     // Needed so things don't break if you destructure fs and pass individual functions around
     this.readFile = this.readFile.bind(this)
     this.writeFile = this.writeFile.bind(this)
@@ -174,8 +176,17 @@ module.exports = class PromisifiedFS {
     return new Stat(data);
   }
   async _lstat(filepath, opts) {
-    return this.stat(filepath, opts);
+    ;[filepath, opts] = cleanParams(filepath, opts);
+    let data = this._cache.lstat(filepath);
+    return new Stat(data);
   }
-  readlink() {}
-  symlink() {}
+  async _readlink(filepath, opts) {
+    ;[filepath, opts] = cleanParams(filepath, opts);
+    return this._cache.readlink(filepath);
+  }
+  async _symlink(target, filepath) {
+    ;[target, filepath] = cleanParams2(target, filepath);
+    this._cache.symlink(target, filepath);
+    return null;
+  }
 }

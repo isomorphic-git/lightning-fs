@@ -249,4 +249,102 @@ describe("fs.promises module", () => {
       });
     });
   });
+
+  describe("symlink", () => {
+    it("symlink a file and read/write to it", done => {
+      fs.mkdir("/symlink").finally(() => {
+        fs.writeFile("/symlink/a.txt", "hello").then(() => {
+          fs.symlink("/symlink/a.txt", "/symlink/b.txt").then(() => {
+            fs.readFile("/symlink/b.txt", "utf8").then(data => {
+              expect(data).toBe("hello")
+              fs.writeFile("/symlink/b.txt", "world").then(() => {
+                fs.readFile("/symlink/a.txt", "utf8").then(data => {
+                  expect(data).toBe("world");
+                  done();
+                })
+              })
+            });
+          });
+        });
+      });
+    });
+    it("symlink a directory and read/write to it", done => {
+      fs.mkdir("/symlink").finally(() => {
+        fs.mkdir("/symlink/a").finally(() => {
+          fs.writeFile("/symlink/a/file.txt", "data").then(() => {
+            fs.symlink("/symlink/a", "/symlink/b").then(() => {
+              fs.readdir("/symlink/b").then(data => {
+                expect(data.includes("file.txt")).toBe(true);
+                fs.readFile("/symlink/b/file.txt", "utf8").then(data => {
+                  expect(data).toBe("data")
+                  fs.writeFile("/symlink/b/file2.txt", "world").then(() => {
+                    fs.readFile("/symlink/a/file2.txt", "utf8").then(data => {
+                      expect(data).toBe("world");
+                      done();
+                    })
+                  })
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+    it("unlink doesn't follow symlinks", done => {
+      fs.mkdir("/symlink").finally(() => {
+        fs.mkdir("/symlink/del").finally(() => {
+          fs.writeFile("/symlink/del/file.txt", "data").then(() => {
+            fs.symlink("/symlink/del/file.txt", "/symlink/del/file2.txt").then(() => {
+              fs.readdir("/symlink/del").then(data => {
+                expect(data.includes("file.txt")).toBe(true)
+                expect(data.includes("file2.txt")).toBe(true)
+                fs.unlink("/symlink/del/file2.txt").then(data => {
+                  fs.readdir("/symlink/del").then(data => {
+                    expect(data.includes("file.txt")).toBe(true)
+                    expect(data.includes("file2.txt")).toBe(false)
+                    done();
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+    it("lstat doesn't follow symlinks", done => {
+      fs.mkdir("/symlink").finally(() => {
+        fs.mkdir("/symlink/lstat").finally(() => {
+          fs.writeFile("/symlink/lstat/file.txt", "data").then(() => {
+            fs.symlink("/symlink/lstat/file.txt", "/symlink/lstat/file2.txt").then(() => {
+              fs.stat("/symlink/lstat/file2.txt").then(stat => {
+                expect(stat.isFile()).toBe(true)
+                expect(stat.isSymbolicLink()).toBe(false)
+                fs.lstat("/symlink/lstat/file2.txt").then(stat => {
+                  expect(stat.isFile()).toBe(false)
+                  expect(stat.isSymbolicLink()).toBe(true)
+                  done();
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+
+  describe("readlink", () => {
+    it("readlink returns the target path", done => {
+      fs.mkdir("/readlink").finally(() => {
+        fs.writeFile("/readlink/a.txt", "hello").then(() => {
+          fs.symlink("/readlink/a.txt", "/readlink/b.txt").then(() => {
+            fs.readlink("/readlink/b.txt", "utf8").then(data => {
+              expect(data).toBe("/readlink/a.txt")
+              done();
+            });
+          });
+        });
+      });
+    });
+  });
+
 });

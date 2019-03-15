@@ -101,11 +101,18 @@ module.exports = class CacheFS {
     }
     return _root;
   }
-  _lookup(filepath) {
+  _lookup(filepath, follow = true) {
     let dir = this._root;
     for (let part of path.split(filepath)) {
       dir = dir.get(part);
       if (!dir) throw new ENOENT(filepath);
+      // Follow symlinks
+      if (follow) {
+        const stat = dir.get(STAT)
+        if (stat.type === 'symlink') {
+          dir = this._lookup(stat.target)
+        }
+      }
     }
     return dir;
   }
@@ -186,5 +193,41 @@ module.exports = class CacheFS {
   }
   stat(filepath) {
     return this._lookup(filepath).get(STAT);
+  }
+  lstat(filepath) {
+    return this._lookup(filepath, false).get(STAT);
+  }
+  readlink(filepath) {
+    return this._lookup(filepath, false).get(STAT).target;
+  }
+  symlink(target, filepath) {
+    let ino, mode;
+    try {
+      let oldStat = this.stat(filepath);
+      if (mode === null) {
+        mode = oldStat.mode;
+      }
+      ino = oldStat.ino;
+    } catch (err) {}
+    if (mode == null) {
+      mode = 0o666;
+    }
+    if (ino == null) {
+      ino = this.autoinc();
+    }
+    let dir = this._lookup(path.dirname(filepath));
+    let basename = path.basename(filepath);
+    let stat = {
+      mode,
+      type: "symlink",
+      target,
+      size: 0,
+      mtimeMs: Date.now(),
+      ino,
+    };
+    let entry = new Map();
+    entry.set(STAT, stat);
+    dir.set(basename, entry);
+    return stat;
   }
 };
