@@ -28,9 +28,7 @@ function cleanParams(filepath, opts) {
 
 function cleanParams2(oldFilepath, newFilepath) {
   // normalize paths
-  oldFilepath = path.normalize(oldFilepath);
-  newFilepath = path.normalize(newFilepath);
-  return [oldFilepath, newFilepath];
+  return [path.normalize(oldFilepath), path.normalize(newFilepath)];
 }
 
 module.exports = class PromisifiedFS {
@@ -113,14 +111,14 @@ module.exports = class PromisifiedFS {
       data = encode(data);
     }
     await this.superblockPromise
-    let stat = this._cache.writeFile(filepath, data, { mode });
+    const stat = this._cache.writeFile(filepath, data, { mode });
     await this._backend.writeFile(stat.ino, data)
     return null
   }
   async unlink(filepath, opts) {
     ;[filepath, opts] = cleanParams(filepath, opts);
     await this.superblockPromise
-    let stat = this._cache.stat(filepath);
+    const stat = this._cache.stat(filepath);
     this._cache.unlink(filepath);
     await this._backend.unlink(stat.ino)
     return null
@@ -128,8 +126,7 @@ module.exports = class PromisifiedFS {
   async readdir(filepath, opts) {
     ;[filepath, opts] = cleanParams(filepath, opts);
     await this.superblockPromise
-    let data = this._cache.readdir(filepath);
-    return data
+    return this._cache.readdir(filepath);
   }
   async mkdir(filepath, opts) {
     ;[filepath, opts] = cleanParams(filepath, opts);
@@ -157,7 +154,7 @@ module.exports = class PromisifiedFS {
   async stat(filepath, opts) {
     ;[filepath, opts] = cleanParams(filepath, opts);
     await this.superblockPromise
-    let data = this._cache.stat(filepath);
+    const data = this._cache.stat(filepath);
     return new Stat(data);
   }
   async lstat(filepath, opts) {
