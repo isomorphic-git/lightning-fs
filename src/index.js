@@ -35,6 +35,8 @@ module.exports = class FS {
     this.rename = this.rename.bind(this)
     this.stat = this.stat.bind(this)
     this.lstat = this.lstat.bind(this)
+    this.readlink = this.readlink.bind(this)
+    this.symlink = this.symlink.bind(this)
   }
   _cleanParams(filepath, opts, cb, stopClock = null, save = false) {
     filepath = path.normalize(filepath);
@@ -242,8 +244,42 @@ module.exports = class FS {
       .catch(cb);
   }
   lstat(filepath, opts, cb) {
-    return this.stat(filepath, opts, cb);
+    [filepath, opts, cb] = this._cleanParams(filepath, opts, cb);
+    this.superblockPromise
+      .then(() => {
+        try {
+          let data = this._cache.lstat(filepath);
+          return cb(null, new Stat(data));
+        } catch (err) {
+          return cb(err);
+        }
+      })
+      .catch(cb);
   }
-  readlink() {}
-  symlink() {}
+  readlink(filepath, opts, cb) {
+    [filepath, opts, cb] = this._cleanParams(filepath, opts, cb);
+    this.superblockPromise
+      .then(() => {
+        try {
+          let data = this._cache.readlink(filepath);
+          return cb(null, data);
+        } catch (err) {
+          return cb(err);
+        }
+      })
+      .catch(cb);
+  }
+  symlink(target, filepath, cb) {
+    [target, filepath, cb] = this._cleanParams2(target, filepath, cb, null, true);
+    this.superblockPromise
+      .then(() => {
+        try {
+          this._cache.symlink(target, filepath);
+          return cb(null);
+        } catch (err) {
+          return cb(err);
+        }
+      })
+      .catch(cb);
+  }
 }
