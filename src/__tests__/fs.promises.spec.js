@@ -15,7 +15,6 @@ describe("fs.promises module", () => {
     it("root directory already exists", (done) => {
       fs.mkdir("/").catch(err => {
         expect(err).not.toBe(null);
-        console.log(err)
         expect(err.code).toEqual("EEXIST");
         done();
       });
