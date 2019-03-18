@@ -9,7 +9,7 @@ I wanted to see if I could make something faster than [BrowserFS](https://github
 ## Comparison with other libraries
 
 This library does not even come close to implementing the full [`fs`](https://nodejs.org/api/fs.html) API.
-Instead, it only implements [the subset used by isomorphic-git 'fs' plugin interface](https://isomorphic-git.org/docs/en/plugin_fs).
+Instead, it only implements [the subset used by isomorphic-git 'fs' plugin interface](https://isomorphic-git.org/docs/en/plugin_fs) plus the [`fs.promises`](https://nodejs.org/dist/latest-v10.x/docs/api/fs.html#fs_fs_promises_api) versions of those functions.
 
 Unlike BrowserFS, which has a dozen backends and is highly configurable, `lightning-fs` has a single configuration that should Just Work for most users.
 
@@ -131,7 +131,19 @@ The included methods are:
 
 ### `fs.lstat(filepath, opts?, cb)`
 
-Alias to `fs.stat` for now until symlinks are supported.
+Like `fs.stat` except that paths to symlinks return the symlink stats not the file stats of the symlink's target.
+
+### `fs.symlink(target, filepath, cb)`
+
+Create a symlink at `filepath` that points to `target`.
+
+### `fs.readlink(filepath, opts?, cb)`
+
+Read the target of a symlink.
+
+### `fs.promises`
+
+All the same functions as above, but instead of passing a callback they return a promise.
 
 ## License
 
