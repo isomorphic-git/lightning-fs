@@ -112,12 +112,13 @@ module.exports = class PromisifiedFS {
     const { mode, encoding = "utf8" } = opts;
     if (typeof data === "string") {
       if (encoding !== "utf8") {
-        return cb(new Error('Only "utf8" encoding is supported in writeFile'));
+        throw new Error('Only "utf8" encoding is supported in writeFile');
       }
       data = encode(data);
     }
     const stat = this._cache.writeFile(filepath, data, { mode });
     await this._idb.writeFile(stat.ino, data)
+    this.saveSuperblock();
     return null
   }
   async unlink(filepath, opts) {
@@ -126,6 +127,7 @@ module.exports = class PromisifiedFS {
     const stat = this._cache.stat(filepath);
     this._cache.unlink(filepath);
     await this._idb.unlink(stat.ino)
+    this.saveSuperblock();
     return null
   }
   async readdir(filepath, opts) {
@@ -138,6 +140,7 @@ module.exports = class PromisifiedFS {
     ;[filepath, opts] = cleanParams(filepath, opts);
     const { mode = 0o777 } = opts;
     await this._cache.mkdir(filepath, { mode });
+    this.saveSuperblock();
     return null
   }
   async rmdir(filepath, opts) {
@@ -148,12 +151,14 @@ module.exports = class PromisifiedFS {
       throw new ENOTEMPTY();
     }
     this._cache.rmdir(filepath);
+    this.saveSuperblock();
     return null;
   }
   async rename(oldFilepath, newFilepath) {
     await this._init()
     ;[oldFilepath, newFilepath] = cleanParams2(oldFilepath, newFilepath);
     this._cache.rename(oldFilepath, newFilepath);
+    this.saveSuperblock();
     return null;
   }
   async stat(filepath, opts) {
@@ -177,6 +182,7 @@ module.exports = class PromisifiedFS {
     await this._init()
     ;[target, filepath] = cleanParams2(target, filepath);
     this._cache.symlink(target, filepath);
+    this.saveSuperblock();
     return null;
   }
 }
