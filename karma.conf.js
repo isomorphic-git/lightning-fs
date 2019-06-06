@@ -79,7 +79,7 @@ module.exports = function (config) {
         platformName: 'iOS',
         platformVersion: '11.2',
         browserName: 'Safari',
-        appiumVersion: '1.7.2'
+        appiumVersion: '1.9.1'
       },
       sl_android_chrome: {
         base: 'SauceLabs',
@@ -87,7 +87,7 @@ module.exports = function (config) {
         platformName: 'Android',
         platformVersion: '7.1',
         browserName: 'Chrome',
-        appiumVersion: '1.7.2'
+        appiumVersion: '1.9.1'
       },
       FirefoxHeadless: {
         base: 'Firefox',
