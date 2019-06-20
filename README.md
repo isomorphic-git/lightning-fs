@@ -49,6 +49,8 @@ import FS from '@isomorphic-git/lightning-fs';
 const fs = new FS("testfs")
 ```
 
+**Note: do not create multiple `fs` instances using the same name.** If you do, you'll have two distinct FileSystems both fighting over the same IndexedDb store.
+
 Options object:
 
 | Param  | Type [= default]   | Description                                                           |
