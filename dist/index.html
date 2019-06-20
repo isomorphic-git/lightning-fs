@@ -1,0 +1,10 @@
+<script src="lightning-fs.min.js"></script>
+<script src="test.js"></script>
+<script>
+
+window.worker = new Worker('worker.js')
+window.fs = new LightningFS("fs");
+
+test(window.fs, 'A')
+
+</script>

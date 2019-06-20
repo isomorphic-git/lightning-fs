@@ -43,18 +43,37 @@ module.exports = class PromisifiedFS {
       this._http = new HttpBackend(url)
     }
     this._initPromise = this._init()
+    this._operations = new Set()
     // Needed so things don't break if you destructure fs and pass individual functions around
-    this.readFile = this.readFile.bind(this)
-    this.writeFile = this.writeFile.bind(this)
-    this.unlink = this.unlink.bind(this)
-    this.readdir = this.readdir.bind(this)
-    this.mkdir = this.mkdir.bind(this)
-    this.rmdir = this.rmdir.bind(this)
-    this.rename = this.rename.bind(this)
-    this.stat = this.stat.bind(this)
-    this.lstat = this.lstat.bind(this)
-    this.readlink = this.readlink.bind(this)
-    this.symlink = this.symlink.bind(this)
+    this.readFile = this._wrap(this.readFile)
+    this.writeFile = this._wrap(this.writeFile)
+    this.unlink = this._wrap(this.unlink)
+    this.readdir = this._wrap(this.readdir)
+    this.mkdir = this._wrap(this.mkdir)
+    this.rmdir = this._wrap(this.rmdir)
+    this.rename = this._wrap(this.rename)
+    this.stat = this._wrap(this.stat)
+    this.lstat = this._wrap(this.lstat)
+    this.readlink = this._wrap(this.readlink)
+    this.symlink = this._wrap(this.symlink)
+  }
+  _wrap (fn) {
+    let tfn = async function (...args) {
+      let op = {
+        name: fn.name,
+        args,
+      }
+      this._operations.add(op)
+      try {
+        return await fn.apply(this, args)
+      } finally {
+        this._operations.delete(op)
+        console.log(op)
+        console.info(this._operations.size + ' ops in flight')
+      }
+    }
+    tfn.bind(this)
+    return tfn
   }
   async _init() {
     if (this._initPromise) return this._initPromise
