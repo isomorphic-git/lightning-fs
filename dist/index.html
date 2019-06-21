@@ -1,10 +1,19 @@
+<a href="page2.html">Link</a>
 <script src="lightning-fs.min.js"></script>
 <script src="test.js"></script>
 <script>
 
 window.worker = new Worker('worker.js')
 window.fs = new LightningFS("fs");
+window.fs.free()
 
 test(window.fs, 'A')
+
+;['freeze', 'beforeunload'].forEach((type) => {
+  window.addEventListener(type, () => {
+    window.fs.free()
+    window.worker.postMessage('die')
+  }, {capture: true});
+});
 
 </script>

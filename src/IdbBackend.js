@@ -1,4 +1,4 @@
-const idb = require("idb-keyval");
+const idb = require("@wmhilton/idb-keyval");
 
 module.exports = class IdbBackend {
   constructor(name) {
@@ -22,5 +22,8 @@ module.exports = class IdbBackend {
   }
   wipe() {
     return idb.clear(this._store)
+  }
+  close() {
+    return idb.close(this._store)
   }
 }

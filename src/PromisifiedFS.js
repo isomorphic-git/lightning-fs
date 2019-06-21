@@ -6,6 +6,7 @@ const CacheFS = require("./CacheFS.js");
 const { ENOENT, ENOTEMPTY } = require("./errors.js");
 const IdbBackend = require("./IdbBackend.js");
 const HttpBackend = require("./HttpBackend.js")
+const Mutex = require("./Mutex.js");
 
 const path = require("./path.js");
 const clock = require("./clock.js");
@@ -34,6 +35,8 @@ function cleanParams2(oldFilepath, newFilepath) {
 module.exports = class PromisifiedFS {
   constructor(name, { wipe, url } = {}) {
     this._idb = new IdbBackend(name);
+    this._mutex = new Mutex(name);
+    this._mutex.wait().then(success => console.log('GOT LOCK!', success))
     this._cache = new CacheFS(name);
     this._opts = { wipe, url };
     this.saveSuperblock = debounce(() => {
@@ -68,8 +71,8 @@ module.exports = class PromisifiedFS {
         return await fn.apply(this, args)
       } finally {
         this._operations.delete(op)
-        console.log(op)
-        console.info(this._operations.size + ' ops in flight')
+        // console.log(op)
+        // console.log(this._operations.size + ' ops in flight')
       }
     }
     tfn.bind(this)
