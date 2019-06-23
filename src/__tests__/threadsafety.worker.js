@@ -8,7 +8,9 @@ const whoAmI = (typeof window === 'undefined' ? (self.name ? self.name : 'worker
 
 async function writeFiles () {
   console.log(whoAmI + 'write stuff')
-  await Promise.all([0, 1, 2, 3, 4].map(i => self.fs.writeFile(`/${self.name}_${i}.txt`, String(i))))
+  // Chrome Mobile 67 and Mobile Safari 11 do not yet support named Workers
+  let name = self.name || Math.random()
+  await Promise.all([0, 1, 2, 3, 4].map(i => self.fs.writeFile(`/${name}_${i}.txt`, String(i))))
   self.postMessage({ message: 'COMPLETE' })
 }
 
