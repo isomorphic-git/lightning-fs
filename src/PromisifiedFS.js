@@ -32,10 +32,11 @@ function cleanParams2(oldFilepath, newFilepath) {
   return [path.normalize(oldFilepath), path.normalize(newFilepath)];
 }
 
-const whoAmI = typeof window === 'undefined' ? 'worker: ' : 'main: '
+const whoAmI = (typeof window === 'undefined' ? (self.name ? self.name : 'worker') : 'main' )+ ': '
 
 module.exports = class PromisifiedFS {
   constructor(name, { wipe, url } = {}) {
+    this._name = name
     this._idb = new IdbBackend(name);
     this._mutex = new Mutex(name);
     this._cache = new CacheFS(name);
@@ -98,12 +99,14 @@ module.exports = class PromisifiedFS {
   }
   async __activate() {
     if (this._cache.activated) return
-    if (!this._mutex.has()) await this._mutex.wait()
+    // console.log(whoAmI + 'ACTIVATING ' + this._name)
     // Wipe IDB if requested
     if (this._needsWipe) {
       this._needsWipe = false;
       await this._idb.wipe()
+      await this._mutex.release({ force: true })
     }
+    if (!this._mutex.has()) await this._mutex.wait()
     // Attempt to load FS from IDB backend
     const root = await this._idb.loadSuperblock()
     if (root) {
@@ -117,6 +120,7 @@ module.exports = class PromisifiedFS {
       // If there is no HTTP backend, start with an empty filesystem
       this._cache.activate()
     }
+    // console.log(whoAmI + 'ACTIVATED ' + this._name)
   }
   async _deactivate() {
     if (this._activationPromise) await this._activationPromise
@@ -125,9 +129,11 @@ module.exports = class PromisifiedFS {
     return this._deactivationPromise
   }
   async __deactivate() {
+    // console.log(whoAmI + 'DEACTIVATING ' + this._name)
     await this._saveSuperblock()
     this._cache.deactivate()
     await this._mutex.release()
+    // console.log(whoAmI + 'DEACTIVATED ' + this._name)
   }
   async _saveSuperblock() {
     if (this._cache.activated) {
