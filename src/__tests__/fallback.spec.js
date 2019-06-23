@@ -7,7 +7,7 @@ describe("http fallback", () => {
     expect(fs.promises._http).not.toBeFalsy()
   })
   it("loads", (done) => {
-    fs.promises._init().then(() => {
+    fs.promises._activate().then(() => {
       done()
     }).catch(err => {
       expect(err).toBe(null)

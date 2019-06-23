@@ -5,7 +5,6 @@
 
 window.worker = new Worker('worker.js')
 window.fs = new LightningFS("fs");
-window.fs.free()
 
 test(window.fs, 'A')
 

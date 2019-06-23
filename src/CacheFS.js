@@ -5,18 +5,25 @@ const STAT = 0;
 
 module.exports = class CacheFS {
   constructor() {
-    this._root = new Map([["/", this._makeRoot()]]);
   }
   _makeRoot(root = new Map()) {
     root.set(STAT, { mode: 0o777, type: "dir", size: 0, ino: 0, mtimeMs: Date.now() });
     return root
   }
-  loadSuperBlock(superblock) {
-    if (typeof superblock === 'string') {
+  activate(superblock = null) {
+    if (superblock === null) {
+      this._root = new Map([["/", this._makeRoot()]]);
+    } else if (typeof superblock === 'string') {
       this._root = new Map([["/", this._makeRoot(this.parse(superblock))]]);
     } else {
       this._root = superblock
     }
+  }
+  get activated () {
+    return !!this._root
+  }
+  deactivate () {
+    this._root = void 0
   }
   size () {
     // subtract 1 to ignore the root directory itself from the count.

@@ -32,89 +32,110 @@ function cleanParams2(oldFilepath, newFilepath) {
   return [path.normalize(oldFilepath), path.normalize(newFilepath)];
 }
 
+const whoAmI = typeof window === 'undefined' ? 'worker: ' : 'main: '
+
 module.exports = class PromisifiedFS {
   constructor(name, { wipe, url } = {}) {
     this._idb = new IdbBackend(name);
     this._mutex = new Mutex(name);
-    this._mutex.wait().then(success => console.log('GOT LOCK!', success))
     this._cache = new CacheFS(name);
     this._opts = { wipe, url };
+    this._needsWipe = !!wipe;
     this.saveSuperblock = debounce(() => {
       this._saveSuperblock();
     }, 500);
     if (url) {
       this._http = new HttpBackend(url)
     }
-    this._initPromise = this._init()
     this._operations = new Set()
-    // Needed so things don't break if you destructure fs and pass individual functions around
-    this.readFile = this._wrap(this.readFile)
-    this.writeFile = this._wrap(this.writeFile)
-    this.unlink = this._wrap(this.unlink)
-    this.readdir = this._wrap(this.readdir)
-    this.mkdir = this._wrap(this.mkdir)
-    this.rmdir = this._wrap(this.rmdir)
-    this.rename = this._wrap(this.rename)
-    this.stat = this._wrap(this.stat)
-    this.lstat = this._wrap(this.lstat)
-    this.readlink = this._wrap(this.readlink)
-    this.symlink = this._wrap(this.symlink)
+
+    this.readFile = this._wrap(this.readFile, false)
+    this.writeFile = this._wrap(this.writeFile, true)
+    this.unlink = this._wrap(this.unlink, true)
+    this.readdir = this._wrap(this.readdir, false)
+    this.mkdir = this._wrap(this.mkdir, true)
+    this.rmdir = this._wrap(this.rmdir, true)
+    this.rename = this._wrap(this.rename, true)
+    this.stat = this._wrap(this.stat, false)
+    this.lstat = this._wrap(this.lstat, false)
+    this.readlink = this._wrap(this.readlink, false)
+    this.symlink = this._wrap(this.symlink, true)
+
+    this._deactivationPromise = null
+    this._deactivationTimeout = null
+    this._activationPromise = null
+    this._activate()
   }
-  _wrap (fn) {
-    let tfn = async function (...args) {
+  _wrap (fn, mutating) {
+    let i = 0
+    return async (...args) => {
       let op = {
         name: fn.name,
         args,
       }
       this._operations.add(op)
       try {
+        await this._activate()
         return await fn.apply(this, args)
       } finally {
         this._operations.delete(op)
-        // console.log(op)
-        // console.log(this._operations.size + ' ops in flight')
+        if (mutating) this.saveSuperblock() // this is debounced
+        if (this._operations.size === 0) {
+          this._deactivationTimeout = setTimeout(this._deactivate.bind(this), 100)
+        }
       }
     }
-    tfn.bind(this)
-    return tfn
   }
-  async _init() {
-    if (this._initPromise) return this._initPromise
-    if (this._opts.wipe) {
-      await this._wipe();
+  async _activate() {
+    if (this._deactivationTimeout) {
+      clearTimeout(this._deactivationTimeout)
+      this._deactivationTimeout = null
+    }
+    if (this._deactivationPromise) await this._deactivationPromise
+    if (!this._activationPromise) this._activationPromise = this.__activate()
+    this._deactivationPromise = null
+    return this._activationPromise
+  }
+  async __activate() {
+    if (this._cache.activated) return
+    if (!this._mutex.has()) await this._mutex.wait()
+    // Wipe IDB if requested
+    if (this._needsWipe) {
+      this._needsWipe = false;
+      await this._idb.wipe()
+    }
+    // Attempt to load FS from IDB backend
+    const root = await this._idb.loadSuperblock()
+    if (root) {
+      this._cache.activate(root);
+    } else if (this._http) {
+      // If that failed, attempt to load FS from HTTP backend
+      const text = await this._http.loadSuperblock()
+      this._cache.activate(text)
+      await this._saveSuperblock();
     } else {
-      await this._loadSuperblock();
+      // If there is no HTTP backend, start with an empty filesystem
+      this._cache.activate()
     }
   }
-  _wipe() {
-    return this._idb.wipe().then(() => {
-      if (this._http) {
-        return this._http.loadSuperblock().then(text => {
-          if (text) {
-            this._cache.loadSuperBlock(text)
-          }
-        })
-      }
-     }).then(() => this._saveSuperblock());
+  async _deactivate() {
+    if (this._activationPromise) await this._activationPromise
+    if (!this._deactivationPromise) this._deactivationPromise = this.__deactivate()
+    this._activationPromise = null
+    return this._deactivationPromise
   }
-  _saveSuperblock() {
-    return this._idb.saveSuperblock(this._cache._root);
+  async __deactivate() {
+    await this._saveSuperblock()
+    this._cache.deactivate()
+    await this._mutex.release()
   }
-  _loadSuperblock() {
-    return this._idb.loadSuperblock().then(root => {
-      if (root) {
-        this._cache.loadSuperBlock(root);
-      } else if (this._http) {
-        return this._http.loadSuperblock().then(text => {
-          if (text) {
-            this._cache.loadSuperBlock(text)
-          }
-        })
-      }
-    });
+  async _saveSuperblock() {
+    if (this._cache.activated) {
+      this._lastSavedAt = Date.now()
+      await this._idb.saveSuperblock(this._cache._root);
+    }
   }
   async readFile(filepath, opts) {
-    await this._init()
     ;[filepath, opts] = cleanParams(filepath, opts);
     const { encoding } = opts;
     if (encoding && encoding !== 'utf8') throw new Error('Only "utf8" encoding is supported in readFile');
@@ -124,12 +145,11 @@ module.exports = class PromisifiedFS {
       data = await this._http.readFile(filepath)
     }
     if (data && encoding === "utf8") {
-        data = decode(data);
+      data = decode(data);
     }
     return data;
   }
   async writeFile(filepath, data, opts) {
-    await this._init()
     ;[filepath, opts] = cleanParams(filepath, opts);
     const { mode, encoding = "utf8" } = opts;
     if (typeof data === "string") {
@@ -140,71 +160,56 @@ module.exports = class PromisifiedFS {
     }
     const stat = this._cache.writeFile(filepath, data, { mode });
     await this._idb.writeFile(stat.ino, data)
-    this.saveSuperblock();
     return null
   }
   async unlink(filepath, opts) {
-    await this._init()
     ;[filepath, opts] = cleanParams(filepath, opts);
     const stat = this._cache.stat(filepath);
     this._cache.unlink(filepath);
     await this._idb.unlink(stat.ino)
-    this.saveSuperblock();
     return null
   }
   async readdir(filepath, opts) {
-    await this._init()
     ;[filepath, opts] = cleanParams(filepath, opts);
     return this._cache.readdir(filepath);
   }
   async mkdir(filepath, opts) {
-    await this._init()
     ;[filepath, opts] = cleanParams(filepath, opts);
     const { mode = 0o777 } = opts;
     await this._cache.mkdir(filepath, { mode });
-    this.saveSuperblock();
     return null
   }
   async rmdir(filepath, opts) {
-    await this._init()
     ;[filepath, opts] = cleanParams(filepath, opts);
     // Never allow deleting the root directory.
     if (filepath === "/") {
       throw new ENOTEMPTY();
     }
     this._cache.rmdir(filepath);
-    this.saveSuperblock();
     return null;
   }
   async rename(oldFilepath, newFilepath) {
-    await this._init()
     ;[oldFilepath, newFilepath] = cleanParams2(oldFilepath, newFilepath);
     this._cache.rename(oldFilepath, newFilepath);
-    this.saveSuperblock();
     return null;
   }
   async stat(filepath, opts) {
-    await this._init()
     ;[filepath, opts] = cleanParams(filepath, opts);
     const data = this._cache.stat(filepath);
     return new Stat(data);
   }
   async lstat(filepath, opts) {
-    await this._init()
     ;[filepath, opts] = cleanParams(filepath, opts);
     let data = this._cache.lstat(filepath);
     return new Stat(data);
   }
   async readlink(filepath, opts) {
-    await this._init()
     ;[filepath, opts] = cleanParams(filepath, opts);
     return this._cache.readlink(filepath);
   }
   async symlink(target, filepath) {
-    await this._init()
     ;[target, filepath] = cleanParams2(target, filepath);
     this._cache.symlink(target, filepath);
-    this.saveSuperblock();
     return null;
   }
 }

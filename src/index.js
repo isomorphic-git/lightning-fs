@@ -29,7 +29,7 @@ module.exports = class FS {
   }
   free() {
     this.promises._idb.close()
-    this.promises._mutex.release()
+    if (this.promises._mutex.has()) this.promises._mutex.release()
   }
   readFile(filepath, opts, cb) {
     const [resolve, reject] = wrapCallback(opts, cb);

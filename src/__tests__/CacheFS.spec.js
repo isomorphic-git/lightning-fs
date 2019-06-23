@@ -11,13 +11,15 @@ describe("CacheFS module", () => {
   });
   it("size()", () => {
     const fs = new CacheFS();
+    fs.activate()
     expect(fs.size()).toEqual(0)
-    fs.loadSuperBlock(treeText)
+    fs.activate(treeText)
     let inodeCount = treeText.trim().split('\n').length
     expect(fs.size()).toEqual(inodeCount)
   });
   it("autoinc()", () => {
     const fs = new CacheFS();
+    fs.activate()
     expect(fs.autoinc()).toEqual(1)
     fs.writeFile('/foo', 'bar', {})
     expect(fs.autoinc()).toEqual(2)
