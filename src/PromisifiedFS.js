@@ -32,8 +32,6 @@ function cleanParams2(oldFilepath, newFilepath) {
   return [path.normalize(oldFilepath), path.normalize(newFilepath)];
 }
 
-const whoAmI = (typeof window === 'undefined' ? (self.name ? self.name : 'worker') : 'main' )+ ': '
-
 module.exports = class PromisifiedFS {
   constructor(name, { wipe, url } = {}) {
     this._name = name
@@ -99,7 +97,6 @@ module.exports = class PromisifiedFS {
   }
   async __activate() {
     if (this._cache.activated) return
-    // console.log(whoAmI + 'ACTIVATING ' + this._name)
     // Wipe IDB if requested
     if (this._needsWipe) {
       this._needsWipe = false;
@@ -120,7 +117,6 @@ module.exports = class PromisifiedFS {
       // If there is no HTTP backend, start with an empty filesystem
       this._cache.activate()
     }
-    // console.log(whoAmI + 'ACTIVATED ' + this._name)
   }
   async _deactivate() {
     if (this._activationPromise) await this._activationPromise
@@ -129,12 +125,10 @@ module.exports = class PromisifiedFS {
     return this._deactivationPromise
   }
   async __deactivate() {
-    // console.log(whoAmI + 'DEACTIVATING ' + this._name)
     await this._saveSuperblock()
     this._cache.deactivate()
     await this._mutex.release()
     await this._idb.close()
-    // console.log(whoAmI + 'DEACTIVATED ' + this._name)
   }
   async _saveSuperblock() {
     if (this._cache.activated) {

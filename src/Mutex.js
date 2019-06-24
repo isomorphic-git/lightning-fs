@@ -2,12 +2,9 @@ const idb = require("@wmhilton/idb-keyval");
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
-const whoAmI = (typeof window === 'undefined' ? (self.name ? self.name : 'worker') : 'main' )+ ': '
-
 module.exports = class Mutex {
   constructor(name) {
     this._id = Math.random()
-    // console.log(whoAmI + this._id)
     this._database = name
     this._store = new idb.Store(this._database + "_lock", this._database + "_lock")
     this._has = false
@@ -30,7 +27,7 @@ module.exports = class Mutex {
       return success ? { holder: this._id, expires: now + ttl } : current
     }, this._store)
     if (expired) {
-      console.trace('LOCK EXPIRED?!')
+      console.trace('Mutex expired')
     }
     if (doubleLock) {
       throw new Error('Mutex double-locked')
@@ -70,7 +67,10 @@ module.exports = class Mutex {
     }
     return success
   }
-  async _keepAlive ({ ttl = 1000, refreshPeriod = Math.max(ttl * 0.8 - 600, 10) } = {}) {
+  // Note: Chrome throttles & batches timers in background tabs to 1Hz,
+  // so there's not much point in having a refreshPeriod shorter than 1000.
+  // And TTL obviously needs to be greater than refreshPeriod.
+  async _keepAlive ({ ttl = 5000, refreshPeriod = 3000 } = {}) {
     const keepAliveFn = async () => {
       let success
       let someoneDeletedIt
