@@ -27,10 +27,6 @@ module.exports = class FS {
     this.readlink = this.readlink.bind(this)
     this.symlink = this.symlink.bind(this)
   }
-  free() {
-    this.promises._idb.close()
-    if (this.promises._mutex.has()) this.promises._mutex.release()
-  }
   readFile(filepath, opts, cb) {
     const [resolve, reject] = wrapCallback(opts, cb);
     this.promises.readFile(filepath, opts).then(resolve).catch(reject)

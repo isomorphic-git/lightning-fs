@@ -55,7 +55,7 @@ import FS from '@isomorphic-git/lightning-fs';
 const fs = new FS("testfs")
 ```
 
-**Note: It is better not to create multiple `FS` instances using the same name.** Performance will be slightly lessened as each instance maintains its own cache, and will have to compete over the mutex for excusive access to the IndexedDb store.
+**Note: It is better not to create multiple `FS` instances using the same name in a single thread.** Memory usage will be higher as each instance maintains its own cache, and throughput may be lower as each instance will have to compete over the mutex for access to the IndexedDb store.
 
 Options object:
 

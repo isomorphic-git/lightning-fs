@@ -61,6 +61,9 @@ module.exports = class Mutex {
       this._has = !success
       return success ? void 0 : current
     }, this._store)
+    if (!this._has) {
+      await idb.close(this._store)
+    }
     if (!success && !force) {
       if (doubleFree) throw new Error('Mutex double-freed')
       if (someoneElseHasIt) throw new Error('Mutex lost ownership')

@@ -133,6 +133,7 @@ module.exports = class PromisifiedFS {
     await this._saveSuperblock()
     this._cache.deactivate()
     await this._mutex.release()
+    await this._idb.close()
     // console.log(whoAmI + 'DEACTIVATED ' + this._name)
   }
   async _saveSuperblock() {
