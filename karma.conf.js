@@ -34,6 +34,18 @@ module.exports = function (config) {
         watched: false,
         included: false
       },
+      {
+        pattern: 'src/**/*.worker.js',
+        served: true,
+        watched: true,
+        included: false
+      },
+      {
+        pattern: 'dist/**',
+        served: true,
+        watched: true,
+        included: false
+      },
     ],
     // list of files to exclude
     // exclude: [

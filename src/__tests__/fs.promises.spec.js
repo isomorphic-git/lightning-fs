@@ -1,6 +1,6 @@
 import FS from "../index.js";
 
-const fs = new FS("testfs", { wipe: true }).promises;
+const fs = new FS("testfs-promises", { wipe: true }).promises;
 
 const HELLO = new Uint8Array([72, 69, 76, 76, 79]);
 

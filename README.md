@@ -38,6 +38,12 @@ The in-memory portion of the filesystem is persisted to IndexedDB with a debounc
 The files themselves are not currently cached in memory, because I don't want to waste a lot of memory.
 Applications can always *add* an LRU cache on top of `lightning-fs` - if I add one internally and it isn't tuned well for your application, it might be much harder to work around.
 
+### Multi-threaded filesystem access
+
+Multiple tabs (and web workers) can share a filesystem. However, because SharedArrayBuffer is still not available in most browsers, the in-memory cache that makes LightningFS fast cannot be shared. If each thread was allowed to update its cache independently, then you'd have a complex distributed system and would need a fancy algorithm to resolve conflicts. Instead, I'm counting on the fact that your multi-threaded applications will NOT be IO bound, and thus a simpler strategy for sharing the filesystem will work. Filesystem access is bottlenecked by a mutex (implemented via polling and an atomic compare-and-replace operation in IndexedDB) to ensure that only one thread has access to the filesystem at a time. If the active thread is constantly using the filesystem, no other threads will get a chance. However if the active thread's filesystem goes idle - no operations are pending and no new operations are started - then after 500ms its in-memory cache is serialized and saved to IndexedDB and the mutex is released. (500ms was chosen experimentally such that an [isomorphic-git](https://github.com/isomorphic-git/isomorphic-git) `clone` operation didn't thrash the mutex.)
+
+While the mutex is being held by another thread, any fs operations will be stuck waiting until the mutex becomes available. If the mutex is not available even after ten minutes then the filesystem operations will fail with an error. This could happen if say, you are trying to write to a log file every 100ms. You can overcome this by making sure that the filesystem is allowed to go idle for >500ms every now and then.
+
 ## Usage
 
 ### `new FS(name, opts?)`
@@ -49,7 +55,7 @@ import FS from '@isomorphic-git/lightning-fs';
 const fs = new FS("testfs")
 ```
 
-**Note: do not create multiple `fs` instances using the same name.** If you do, you'll have two distinct FileSystems both fighting over the same IndexedDb store.
+**Note: It is better not to create multiple `FS` instances using the same name in a single thread.** Memory usage will be higher as each instance maintains its own cache, and throughput may be lower as each instance will have to compete over the mutex for access to the IndexedDb store.
 
 Options object:
 
