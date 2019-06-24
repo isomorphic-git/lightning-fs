@@ -63,7 +63,14 @@ module.exports = class PromisifiedFS {
     this._deactivationPromise = null
     this._deactivationTimeout = null
     this._activationPromise = null
-    this._activate()
+    // The fs is initially activated when constructed (in order to wipe/save the superblock)
+    // but there might not be any other fs operations needed until later. Therefore we
+    // need to attempt to release the mutex
+    this._activate().then(() => {
+      if (this._operations.size === 0) {
+        this._deactivationTimeout = setTimeout(this._deactivate.bind(this), 100)
+      }
+    })
   }
   _wrap (fn, mutating) {
     let i = 0
@@ -80,7 +87,7 @@ module.exports = class PromisifiedFS {
         this._operations.delete(op)
         if (mutating) this.saveSuperblock() // this is debounced
         if (this._operations.size === 0) {
-          this._deactivationTimeout = setTimeout(this._deactivate.bind(this), 100)
+          this._deactivationTimeout = setTimeout(this._deactivate.bind(this), 500)
         }
       }
     }
