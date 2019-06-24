@@ -77,7 +77,6 @@ module.exports = class Mutex {
       let someoneElseHasIt
       await idb.update("lock", (current) => {
         const now = Date.now()
-        console.log(whoAmI + 'with', current && (current.expires - now), 'ms to spare')
         someoneDeletedIt = current === void 0
         someoneElseHasIt = current && current.holder !== this._id
         success = !someoneDeletedIt && !someoneElseHasIt
