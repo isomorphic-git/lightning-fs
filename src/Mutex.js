@@ -26,9 +26,6 @@ module.exports = class Mutex {
       this._has = success || doubleLock
       return success ? { holder: this._id, expires: now + ttl } : current
     }, this._store)
-    if (expired) {
-      console.trace('Mutex expired')
-    }
     if (doubleLock) {
       throw new Error('Mutex double-locked')
     }
