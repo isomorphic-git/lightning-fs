@@ -5,7 +5,12 @@ module.exports = class HttpBackend {
   loadSuperblock() {
     return fetch(this._url + '/.superblock.txt').then(res => res.text())
   }
-  readFile(filepath) {
-    return fetch(this._url + filepath).then(res => res.arrayBuffer())
+  async readFile(filepath) {
+    const res = await fetch(this._url + filepath)
+    if (res.status === 200) {
+      return res.arrayBuffer()
+    } else {
+      throw new Error('ENOENT')
+    }
   }
 }
