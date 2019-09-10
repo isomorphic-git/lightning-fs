@@ -1,4 +1,4 @@
-const idb = require("@wmhilton/idb-keyval");
+const idb = require("@isomorphic-git/idb-keyval");
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
