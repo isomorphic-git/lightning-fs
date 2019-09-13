@@ -196,14 +196,16 @@ module.exports = class CacheFS {
     parent.delete(basename);
   }
   rename(oldFilepath, newFilepath) {
-    // grab reference
-    let entry = this._lookup(oldFilepath);
-    // remove from parent directory
-    this.unlink(oldFilepath)
-    // insert into new parent directory
-    let dir = this._lookup(path.dirname(newFilepath));
     let basename = path.basename(newFilepath);
-    dir.set(basename, entry);
+    // Note: do both lookups before making any changes
+    // so if lookup throws, we don't lose data (issue #23)
+    // grab references
+    let entry = this._lookup(oldFilepath);
+    let destDir = this._lookup(path.dirname(newFilepath));
+    // insert into new parent directory
+    destDir.set(basename, entry);
+    // remove from old parent directory
+    this.unlink(oldFilepath)
   }
   stat(filepath) {
     return this._lookup(filepath).get(STAT);
