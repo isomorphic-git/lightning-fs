@@ -1,0 +1,23 @@
+<body>
+<script type="module">
+  import { WebSocketBackend } from './src/WebSocketBackend.js'
+
+  const port = 8542
+  let ws = new WebSocketBackend(`ws://localhost:${port}`)
+  ws.activate().then(async () => {
+    console.log('activated')
+    await ws.mkdir('/Users/wmhilton/code/isomorphic-git/lightning-fs/bar')
+    console.log('mkdir success')
+    try {
+      await ws.rmdir('/Users/wmhilton/code/isomorphic-git/lightning-fs/foo/bar/jack/bean')
+      console.log('rmdir success')
+    } catch (e) {
+      console.log('caught')
+      console.log(e)
+    }
+  })
+  console.log(ws)
+  // ws.addEventListener('open', () => {
+  //   ws.send(JSON.stringify(['hi', 'there']));
+  // })
+</script>
