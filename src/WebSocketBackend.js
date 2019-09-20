@@ -1,28 +1,3 @@
-// const { ENOENT, EEXIST, ENOTEMPTY } = require("./errors.js");
-function Err(name) {
-  return class extends Error {
-    constructor(...args) {
-      super(...args);
-      this.code = name;
-      if (this.message) {
-        this.message = name + ": " + this.message;
-      } else {
-        this.message = name;
-      }
-    }
-  };
-}
-
-const EEXIST = Err("EEXIST");
-const ENOENT = Err("ENOENT");
-const ENOTEMPTY = Err("ENOTEMPTY");
-
-// module.exports = { EEXIST, ENOENT, ENOTEMPTY };
-
-const STAT = 0;
-
-const $ = (...args) => JSON.stringify(args)
-
 export class WebSocketBackend {
   constructor(url) {
     this.url = url
@@ -62,7 +37,8 @@ export class WebSocketBackend {
   deactivate () {
     this.socket.close()
   }
-  call (method, ...args) {
+  async call (method, ...args) {
+    await this.activate()
     this.socket.send(JSON.stringify([this.cbid, method, ...args]))
     return new Promise((resolve, reject) => {
       let e = new Error()
@@ -81,6 +57,9 @@ export class WebSocketBackend {
   }
   async writeFile(...args) {
     return this.call('writeFile', ...args)
+  }
+  async readFile(...args) {
+    return this.call('readFile', ...args)
   }
   async unlink(...args) {
     return this.call('unlink', ...args)

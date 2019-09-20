@@ -19,7 +19,9 @@
     "@wmhilton/idb-keyval": "^3.3.0",
     "isomorphic-textencoder": "1.0.1",
     "just-debounce-it": "1.1.0",
-    "just-once": "1.1.0"
+    "just-once": "1.1.0",
+    "osa": "^2.5.0",
+    "ws": "^7.1.2"
   },
   "devDependencies": {
     "karma": "^3.1.1",
