@@ -1,13 +1,15 @@
-export class WebSocketBackend {
+module.exports = class WebSocketFS {
   constructor(url) {
-    this.url = url
-    this.callbacks = new Map()
-    this.cbid = 1
+    this._url = url
+    this._callbacks = new Map()
+    this._cbid = 1
+    this._activating
   }
   activate() {
     if (this.activated) return
-    return new Promise((resolve, reject) => {
-      this.socket = new WebSocket(this.url)
+    if (this._activating) return this._activating
+    this._activating = new Promise((resolve, reject) => {
+      this.socket = new WebSocket(this._url)
       this.socket.addEventListener('open', () => {
         resolve()
       })
@@ -17,7 +19,7 @@ export class WebSocketBackend {
         let [id, retVal, errVal] = vals
         if (id < 0) {
           if (errVal) {
-            let cb = this.callbacks.get(-id)
+            let cb = this._callbacks.get(-id)
             if (!cb) return
             let [name, message] = errVal
             cb.e.code = name
@@ -25,11 +27,12 @@ export class WebSocketBackend {
             cb.e.message = message
             cb.reject(cb.e)
           } else {
-            this.callbacks.get(-id).resolve(retVal)
+            this._callbacks.get(-id).resolve(retVal)
           }
         }
       })
     })
+    return this._activating
   }
   get activated () {
     return this.socket && this.socket.readyState === 1
@@ -39,11 +42,11 @@ export class WebSocketBackend {
   }
   async call (method, ...args) {
     await this.activate()
-    this.socket.send(JSON.stringify([this.cbid, method, ...args]))
+    this.socket.send(JSON.stringify([this._cbid, method, ...args]))
     return new Promise((resolve, reject) => {
       let e = new Error()
-      this.callbacks.set(this.cbid, { resolve, reject, e })
-      this.cbid++
+      this._callbacks.set(this._cbid, { resolve, reject, e })
+      this._cbid++
     })
   }
   async mkdir(...args) {

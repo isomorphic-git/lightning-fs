@@ -1,6 +1,7 @@
 const once = require("just-once");
 
 const PromisifiedFS = require('./PromisifiedFS');
+const WebSocketFS = require('./WebSocketFS');
 
 function wrapCallback (opts, cb) {
   if (typeof opts === "function") {
@@ -12,8 +13,10 @@ function wrapCallback (opts, cb) {
 }
 
 module.exports = class FS {
-  constructor(...args) {
-    this.promises = new PromisifiedFS(...args)
+  constructor(name, options) {
+    this.promises = /^wss?:\/\//.test(name)
+      ? new WebSocketFS(name)
+      : new PromisifiedFS(name, options)
     // Needed so things don't break if you destructure fs and pass individual functions around
     this.readFile = this.readFile.bind(this)
     this.writeFile = this.writeFile.bind(this)
