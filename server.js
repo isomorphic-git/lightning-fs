@@ -67,18 +67,47 @@ wss.on('connection', (ws, req) => {
   ws.on('message', async (data) => {
     let [id, method, ...args] = JSON.parse(data)
     try {
-      console.log('rx:', id, method, ...args)
+      console.log('rx:', id, method, args[0], '...')
+      // sanitize method
       checkMethod(method)
+      // sanitize path argument
       args[0] = path.normalize(path.resolve(args[0]))
       await checkScope(origin, args[0])
+      // sanitize second path argument
       if (method === 'rename' || method === 'symlink') {
         args[1] = path.normalize(path.resolve(args[1]))
         await checkScope(origin, args[1])
       }
+      // convert JSON to Buffer
+      if (method === 'writeFile') {
+        if (args[1] && args[1].type && args[1].type === 'Buffer') {
+          args[1] = new Uint8Array(args[1].data)
+        }
+      }
       let res = await fs[method](...args)
+      // convert Stat objects to JSON
+      if (method === 'stat' || method === 'lstat') {
+        res = {
+          type: res.isFile()
+            ? 'file'
+            : res.isDirectory()
+              ? 'dir'
+              : res.isSymbolicLink()
+              ? 'symlink'
+              : 'other',
+          mode: res.mode,
+          size: res.size,
+          ino: res.ino,
+          mtimeMs: res.mtimeMs,
+          ctimeMs: res.ctimeMs || stats.mtimeMs,
+          uid: 1,
+          gid: 1,
+          dev: 1
+        }
+      }
       ws.send(JSON.stringify([-id, res]))
     } catch (err) {
-      ws.send(JSON.stringify([-id, null, [err.name, err.message]]))
+      ws.send(JSON.stringify([-id, null, [err.code, err.message]]))
     }
   })
 })

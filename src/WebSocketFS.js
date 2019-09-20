@@ -1,9 +1,25 @@
+const Stat = require("./Stat.js");
+
 module.exports = class WebSocketFS {
   constructor(url) {
     this._url = url
     this._callbacks = new Map()
     this._cbid = 1
     this._activating
+
+    this.deactivate = this.deactivate.bind(this)
+    this.call = this.call.bind(this)
+    this.readFile = this.readFile.bind(this)
+    this.writeFile = this.writeFile.bind(this)
+    this.unlink = this.unlink.bind(this)
+    this.readdir = this.readdir.bind(this)
+    this.mkdir = this.mkdir.bind(this)
+    this.rmdir = this.rmdir.bind(this)
+    this.rename = this.rename.bind(this)
+    this.stat = this.stat.bind(this)
+    this.lstat = this.lstat.bind(this)
+    this.readlink = this.readlink.bind(this)
+    this.symlink = this.symlink.bind(this)
   }
   activate() {
     if (this.activated) return
@@ -15,7 +31,6 @@ module.exports = class WebSocketFS {
       })
       this.socket.addEventListener('message', (event) => {
         let vals = JSON.parse(event.data)
-        console.log(vals)
         let [id, retVal, errVal] = vals
         if (id < 0) {
           if (errVal) {
@@ -62,7 +77,11 @@ module.exports = class WebSocketFS {
     return this.call('writeFile', ...args)
   }
   async readFile(...args) {
-    return this.call('readFile', ...args)
+    let data = await this.call('readFile', ...args)
+    if (data && data.type && data.type === 'Buffer') {
+      data = new Uint8Array(data.data)
+    }
+    return data
   }
   async unlink(...args) {
     return this.call('unlink', ...args)
@@ -71,10 +90,12 @@ module.exports = class WebSocketFS {
     return this.call('rename', ...args)
   }
   async stat(...args) {
-    return this.call('stat', ...args)
+    let data = await this.call('stat', ...args)
+    return new Stat(data);
   }
   async lstat(...args) {
-    return this.call('lstat', ...args)
+    let data = await this.call('lstat', ...args)
+    return new Stat(data)
   }
   async readlink(...args) {
     return this.call('readlink', ...args)

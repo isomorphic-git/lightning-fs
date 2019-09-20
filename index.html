@@ -1,15 +1,14 @@
 <body>
-<script type="module">
-  import { WebSocketBackend } from './src/WebSocketBackend.js'
-
+<script src="/dist/lightning-fs.min.js"></script>
+<script>
   const port = 8542
-  let ws = new WebSocketBackend(`ws://localhost:${port}`)
+  let ws = new LightningFS(`ws://localhost:${port}`)
   ;(async () => {
-    let result = await ws.readdir('/Users/wmhilton/code/isomorphic-git/lightning-fs')
+    let result = await ws.promises.readdir('/Users/wmhilton/code/isomorphic-git/lightning-fs')
     console.log(result)
     window.fs = ws
     try {
-      await ws.rmdir('/Users/wmhilton/code/isomorphic-git/lightning-fs/foo/bar/jack/bean')
+      await ws.promises.rmdir('/Users/wmhilton/code/isomorphic-git/lightning-fs/foo/bar/jack/bean')
       console.log('rmdir success')
     } catch (e) {
       console.log('caught')
