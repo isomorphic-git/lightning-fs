@@ -377,7 +377,11 @@ describe("fs module", () => {
                     expect(err).toBe(null)
                     expect(data.includes("file.txt")).toBe(true)
                     expect(data.includes("file2.txt")).toBe(false)
-                    done();
+                    fs.readFile("/symlink/del/file.txt", "utf8", (err, data) => {
+                      expect(err).toBe(null)
+                      expect(data).toBe("data")
+                      done();
+                    })
                   });
                 });
               });

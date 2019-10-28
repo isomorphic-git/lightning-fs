@@ -172,9 +172,11 @@ module.exports = class PromisifiedFS {
   }
   async unlink(filepath, opts) {
     ;[filepath, opts] = cleanParams(filepath, opts);
-    const stat = this._cache.stat(filepath);
+    const stat = this._cache.lstat(filepath);
     this._cache.unlink(filepath);
-    await this._idb.unlink(stat.ino)
+    if (stat.type !== 'symlink') {
+      await this._idb.unlink(stat.ino)
+    }
     return null
   }
   async readdir(filepath, opts) {
