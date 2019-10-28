@@ -346,7 +346,10 @@ describe("fs.promises module", () => {
                   fs.readdir("/symlink/del").then(data => {
                     expect(data.includes("file.txt")).toBe(true)
                     expect(data.includes("file2.txt")).toBe(false)
-                    done();
+                    fs.readFile("/symlink/del/file.txt", "utf8").then(data => {
+                      expect(data).toBe("data")
+                      done();
+                    })
                   });
                 });
               });
