@@ -72,8 +72,8 @@ module.exports = class FS {
     const [resolve, reject] = wrapCallback(cb);
     this.promises.symlink(target, filepath).then(resolve).catch(reject);
   }
-  backFile(filepath, size, opts, cb) {
+  backFile(filepath, opts, cb) {
     const [resolve, reject] = wrapCallback(opts, cb);
-    this.promises.backFile(filepath, size, opts).then(resolve).catch(reject);
+    this.promises.backFile(filepath, opts).then(resolve).catch(reject);
   }
 }
