@@ -33,7 +33,7 @@ function cleanParams2(oldFilepath, newFilepath) {
 }
 
 module.exports = class PromisifiedFS {
-  constructor(name, { wipe, url } = {}) {
+  constructor(name, { wipe, url, urlauto } = {}) {
     this._name = name
     this._idb = new IdbBackend(name);
     this._mutex = new Mutex(name);
@@ -45,6 +45,7 @@ module.exports = class PromisifiedFS {
     }, 500);
     if (url) {
       this._http = new HttpBackend(url)
+      this._urlauto = !!urlauto
     }
     this._operations = new Set()
 
@@ -59,6 +60,7 @@ module.exports = class PromisifiedFS {
     this.lstat = this._wrap(this.lstat, false)
     this.readlink = this._wrap(this.readlink, false)
     this.symlink = this._wrap(this.symlink, true)
+    this.backFile = this._wrap(this.backFile, true)
 
     this._deactivationPromise = null
     this._deactivationTimeout = null
@@ -143,18 +145,41 @@ module.exports = class PromisifiedFS {
       await this._idb.saveSuperblock(this._cache._root);
     }
   }
+  async _writeStat(filepath, size, opts) {
+    let dirparts = path.split(path.dirname(filepath))
+    let dir = dirparts.shift()
+    for (let dirpart of dirparts) {
+      dir = path.join(dir, dirpart)
+      try {
+        this._cache.mkdir(dir, { mode: 0o777 })
+      } catch (e) {}
+    }
+    return this._cache.writeStat(filepath, size, opts)
+  }
   async readFile(filepath, opts) {
     ;[filepath, opts] = cleanParams(filepath, opts);
     const { encoding } = opts;
     if (encoding && encoding !== 'utf8') throw new Error('Only "utf8" encoding is supported in readFile');
-    const stat = this._cache.stat(filepath);
-    let data = await this._idb.readFile(stat.ino)
+    let data = null, stat = null
+    try {
+      stat = this._cache.stat(filepath);
+      data = await this._idb.readFile(stat.ino)
+    } catch (e) {
+      if (!this._urlauto) throw e
+    }
     if (!data && this._http) {
       data = await this._http.readFile(filepath)
     }
-    if (data && encoding === "utf8") {
-      data = decode(data);
+    if (data) {
+      if (!stat || stat.size != data.byteLength) {
+        stat = await this._writeStat(filepath, data.byteLength, { mode: stat ? stat.mode : 0o666 })
+        this.saveSuperblock() // debounced
+      }
+      if (encoding === "utf8") {
+        data = decode(data);
+      }
     }
+    if (!stat) throw new ENOENT(filepath)
     return data;
   }
   async writeFile(filepath, data, opts) {
@@ -166,7 +191,7 @@ module.exports = class PromisifiedFS {
       }
       data = encode(data);
     }
-    const stat = this._cache.writeFile(filepath, data, { mode });
+    const stat = await this._cache.writeStat(filepath, data.byteLength, { mode });
     await this._idb.writeFile(stat.ino, data)
     return null
   }
@@ -221,5 +246,11 @@ module.exports = class PromisifiedFS {
     ;[target, filepath] = cleanParams2(target, filepath);
     this._cache.symlink(target, filepath);
     return null;
+  }
+  async backFile(filepath, opts) {
+    ;[filepath, opts] = cleanParams(filepath, opts);
+    let size = await this._http.sizeFile(filepath)
+    await this._writeStat(filepath, size, opts)
+    return null
   }
 }

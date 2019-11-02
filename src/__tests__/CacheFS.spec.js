@@ -21,7 +21,7 @@ describe("CacheFS module", () => {
     const fs = new CacheFS();
     fs.activate()
     expect(fs.autoinc()).toEqual(1)
-    fs.writeFile('/foo', 'bar', {})
+    fs.writeStat('/foo', 3, {})
     expect(fs.autoinc()).toEqual(2)
     fs.mkdir('/bar', {})
     expect(fs.autoinc()).toEqual(3)
@@ -33,7 +33,7 @@ describe("CacheFS module", () => {
     expect(fs.autoinc()).toEqual(3)
     fs.mkdir('/bar/bar', {})
     expect(fs.autoinc()).toEqual(4)
-    fs.writeFile('/bar/bar/boo', 'bar', {})
+    fs.writeStat('/bar/bar/boo', 3, {})
     expect(fs.autoinc()).toEqual(5)
     fs.unlink('/bar/bar/boo')
     expect(fs.autoinc()).toEqual(4)
