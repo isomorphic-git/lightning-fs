@@ -164,7 +164,7 @@ module.exports = class CacheFS {
     let ino;
     try {
       let oldStat = this.stat(filepath);
-      if (mode === null) {
+      if (mode == null) {
         mode = oldStat.mode;
       }
       ino = oldStat.ino;

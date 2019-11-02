@@ -69,6 +69,22 @@ describe("fs.promises module", () => {
         });
       });
     });
+    it("write file perserves old mode", done => {
+      fs.mkdir("/writeFile").finally(() => {
+        fs.writeFile("/writeFile/writeFile-mode.txt", "HELLO", { mode: 0o635 }).then(() => {
+          fs.stat("/writeFile/writeFile-mode.txt").then(stats => {
+            let mode = stats.mode;
+            expect(mode).toEqual(0o635)
+            fs.writeFile("/writeFile/writeFile-mode.txt", "WORLD").then(() => {
+              fs.stat("/writeFile/writeFile-mode.txt").then(stats => {
+                expect(stats.mode).toEqual(0o635);
+                done();
+              });
+            });
+          });
+        });
+      });
+    });
   });
 
   describe("readFile", () => {
