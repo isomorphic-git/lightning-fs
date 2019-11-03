@@ -69,6 +69,22 @@ describe("fs.promises module", () => {
         });
       });
     });
+    it("write file perserves old mode", done => {
+      fs.mkdir("/writeFile").finally(() => {
+        fs.writeFile("/writeFile/writeFile-mode.txt", "HELLO", { mode: 0o635 }).then(() => {
+          fs.stat("/writeFile/writeFile-mode.txt").then(stats => {
+            let mode = stats.mode;
+            expect(mode).toEqual(0o635)
+            fs.writeFile("/writeFile/writeFile-mode.txt", "WORLD").then(() => {
+              fs.stat("/writeFile/writeFile-mode.txt").then(stats => {
+                expect(stats.mode).toEqual(0o635);
+                done();
+              });
+            });
+          });
+        });
+      });
+    });
   });
 
   describe("readFile", () => {
@@ -136,6 +152,17 @@ describe("fs.promises module", () => {
         });
       });
     });
+    it("read a file throws", done => {
+      fs.mkdir("/readdir2").finally(() => {
+        fs.writeFile("/readdir2/not-a-dir", "").then(() => {
+          fs.readdir("/readdir2/not-a-dir").catch(err => {
+            expect(err).not.toBe(null);
+            expect(err.code).toBe('ENOTDIR');
+            done();
+          });
+        })
+      })
+    });
   });
 
   describe("rmdir", () => {
@@ -179,6 +206,17 @@ describe("fs.promises module", () => {
                 done();
               });
             });
+          });
+        });
+      });
+    });
+    it("delete a file throws", done => {
+      fs.mkdir("/rmdir").finally(() => {
+        fs.writeFile("/rmdir/not-a-dir", "").then(() => {
+          fs.rmdir("/rmdir/not-a-dir").catch(err => {
+            expect(err).not.toBe(null);
+            expect(err.code).toBe('ENOTDIR');
+            done();
           });
         });
       });
@@ -346,7 +384,10 @@ describe("fs.promises module", () => {
                   fs.readdir("/symlink/del").then(data => {
                     expect(data.includes("file.txt")).toBe(true)
                     expect(data.includes("file2.txt")).toBe(false)
-                    done();
+                    fs.readFile("/symlink/del/file.txt", "utf8").then(data => {
+                      expect(data).toBe("data")
+                      done();
+                    })
                   });
                 });
               });
