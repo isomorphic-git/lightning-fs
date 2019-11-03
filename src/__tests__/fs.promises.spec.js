@@ -152,6 +152,17 @@ describe("fs.promises module", () => {
         });
       });
     });
+    it("read a file throws", done => {
+      fs.mkdir("/readdir2").finally(() => {
+        fs.writeFile("/readdir2/not-a-dir", "").then(() => {
+          fs.readdir("/readdir2/not-a-dir").catch(err => {
+            expect(err).not.toBe(null);
+            expect(err.code).toBe('ENOTDIR');
+            done();
+          });
+        })
+      })
+    });
   });
 
   describe("rmdir", () => {
@@ -195,6 +206,17 @@ describe("fs.promises module", () => {
                 done();
               });
             });
+          });
+        });
+      });
+    });
+    it("delete a file throws", done => {
+      fs.mkdir("/rmdir").finally(() => {
+        fs.writeFile("/rmdir/not-a-dir", "").then(() => {
+          fs.rmdir("/rmdir/not-a-dir").catch(err => {
+            expect(err).not.toBe(null);
+            expect(err.code).toBe('ENOTDIR');
+            done();
           });
         });
       });
