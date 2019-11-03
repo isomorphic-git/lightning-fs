@@ -1,5 +1,5 @@
 const path = require("./path.js");
-const { ENOENT, EEXIST, ENOTEMPTY } = require("./errors.js");
+const { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY } = require("./errors.js");
 
 const STAT = 0;
 
@@ -149,8 +149,10 @@ module.exports = class CacheFS {
     dir.set(basename, entry);
   }
   rmdir(filepath) {
+    let dir = this._lookup(filepath);
+    if (dir.get(STAT).type !== 'dir') throw new ENOTDIR();
     // check it's empty (size should be 1 for just StatSym)
-    if (this._lookup(filepath).size > 1) throw new ENOTEMPTY();
+    if (dir.size > 1) throw new ENOTEMPTY();
     // remove from parent
     let parent = this._lookup(path.dirname(filepath));
     let basename = path.basename(filepath);
@@ -158,6 +160,7 @@ module.exports = class CacheFS {
   }
   readdir(filepath) {
     let dir = this._lookup(filepath);
+    if (dir.get(STAT).type !== 'dir') throw new ENOTDIR();
     return [...dir.keys()].filter(key => typeof key === "string");
   }
   writeFile(filepath, data, { mode }) {
