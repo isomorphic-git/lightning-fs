@@ -115,10 +115,7 @@ module.exports = class CacheFS {
       if (follow) {
         const stat = dir.get(STAT)
         if (stat.type === 'symlink') {
-          let target = stat.target
-          if (!target.startsWith('/')) {
-            target = path.normalize(path.join(partialPath, target))
-          }
+          let target = path.resolve(partialPath, stat.target)
           dir = this._lookup(target)
         }
         if (!partialPath) {

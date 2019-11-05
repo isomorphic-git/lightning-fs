@@ -150,6 +150,11 @@ module.exports = class PromisifiedFS {
     const stat = this._cache.stat(filepath);
     let data = await this._idb.readFile(stat.ino)
     if (!data && this._http) {
+      let lstat = this._cache.lstat(filepath)
+      while (lstat.type === 'symlink') {
+        filepath = path.resolve(path.dirname(filepath), lstat.target)
+        lstat = this._cache.lstat(filepath)
+      }
       data = await this._http.readFile(filepath)
     }
     if (data && encoding === "utf8") {
