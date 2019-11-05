@@ -430,6 +430,20 @@ describe("fs.promises module", () => {
         });
       });
     });
+    it("readlink operates on paths with symlinks", done => {
+      fs.mkdir("/readlink").finally(() => {
+        fs.symlink("/readlink", "/readlink/sub").then(() => {
+          fs.writeFile("/readlink/c.txt", "hello").then(() => {
+            fs.symlink("/readlink/c.txt", "/readlink/d.txt").then(() => {
+              fs.readlink("/readlink/sub/d.txt").then(data => {
+                expect(data).toBe("/readlink/c.txt")
+                done();
+              });
+            });
+          });
+        });
+      });
+    });
   });
 
 });
