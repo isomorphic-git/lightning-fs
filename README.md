@@ -59,10 +59,11 @@ const fs = new FS("testfs")
 
 Options object:
 
-| Param  | Type [= default]   | Description                                                           |
-| ------ | ------------------ | --------------------------------------------------------------------- |
-| `wipe` | boolean = false    | Delete the database and start with an empty filesystem                |
-| `url`  | string = undefined | Let `readFile` requests fall back to an HTTP request to this base URL |
+| Param     | Type [= default]   | Description                                                           |
+| --------- | ------------------ | --------------------------------------------------------------------- |
+| `wipe`    | boolean = false    | Delete the database and start with an empty filesystem                |
+| `url`     | string = undefined | Let `readFile` requests fall back to an HTTP request to this base URL |
+| `urlauto` | boolean = false    | Fall back to HTTP for every read of a missing file, even if unbacked  |
 
 ### `fs.mkdir(filepath, opts?, cb)`
 
@@ -148,6 +149,17 @@ Create a symlink at `filepath` that points to `target`.
 ### `fs.readlink(filepath, opts?, cb)`
 
 Read the target of a symlink.
+
+### `fs.backFile(filepath, opts?, cb)`
+
+Create or change the stat data for a file backed by HTTP.  Size is fetched with a HEAD request.  Useful when using an HTTP backend without `urlauto` set, as then files will only be readable if they have stat data.
+Note that stat data is made automatically from the file `/.superblock.txt` if found on the server.  `/.superblock.txt` can be generated or updated with the [included standalone script](src/superblocktxt.js).
+
+Options object:
+
+| Param      | Type [= default]   | Description                      |
+| ---------- | ------------------ | -------------------------------- |
+| `mode`     | number = 0o666     | Posix mode permissions           |
 
 ### `fs.promises`
 

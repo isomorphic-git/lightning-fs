@@ -165,7 +165,7 @@ module.exports = class CacheFS {
     if (dir.get(STAT).type !== 'dir') throw new ENOTDIR();
     return [...dir.keys()].filter(key => typeof key === "string");
   }
-  writeFile(filepath, data, { mode }) {
+  writeStat(filepath, size, { mode }) {
     let ino;
     try {
       let oldStat = this.stat(filepath);
@@ -185,7 +185,7 @@ module.exports = class CacheFS {
     let stat = {
       mode,
       type: "file",
-      size: data.length,
+      size,
       mtimeMs: Date.now(),
       ino,
     };

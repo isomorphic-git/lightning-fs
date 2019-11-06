@@ -26,6 +26,7 @@ module.exports = class FS {
     this.lstat = this.lstat.bind(this)
     this.readlink = this.readlink.bind(this)
     this.symlink = this.symlink.bind(this)
+    this.backFile = this.backFile.bind(this)
   }
   readFile(filepath, opts, cb) {
     const [resolve, reject] = wrapCallback(opts, cb);
@@ -70,5 +71,9 @@ module.exports = class FS {
   symlink(target, filepath, cb) {
     const [resolve, reject] = wrapCallback(cb);
     this.promises.symlink(target, filepath).then(resolve).catch(reject);
+  }
+  backFile(filepath, opts, cb) {
+    const [resolve, reject] = wrapCallback(opts, cb);
+    this.promises.backFile(filepath, opts).then(resolve).catch(reject);
   }
 }

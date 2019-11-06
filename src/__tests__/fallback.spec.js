@@ -38,6 +38,12 @@ describe("http fallback", () => {
         done();
       });
     });
+    it("read file not in superblock throws", done => {
+      fs.readFile("/not-in-superblock.txt", (err, data) => {
+        expect(err).not.toBe(null);
+        done();
+      });
+    });
     it("read file /a.txt", done => {
       fs.readFile("/a.txt", 'utf8', (err, data) => {
         expect(err).toBe(null);
@@ -79,6 +85,27 @@ describe("http fallback", () => {
             done();
           });
         });
+      });
+    });
+  });
+  describe("backFile", () => {
+    it("backing a nonexistant file throws", done => {
+      fs.backFile("/backFile/non-existant.txt", (err, data) => {
+        expect(err).not.toBe(null);
+        done();
+      });
+    });
+    it("backing a file makes it readable", done => {
+      fs.backFile("/not-in-superblock.txt", (err, data) => {
+        expect(err).toBe(null)
+        fs.readFile("/not-in-superblock.txt", 'utf8', (err, data) => {
+          expect(err).toBe(null);
+          expect(data).toEqual('Hello from "not-in-superblock"');
+          fs.unlink("/not-in-superblock.txt", (err, data) => {
+            expect(err).toBe(null);
+            done();
+          });
+	});
       });
     });
   });
