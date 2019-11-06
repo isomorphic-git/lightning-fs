@@ -108,11 +108,13 @@ module.exports = class CacheFS {
   _lookup(filepath, follow = true) {
     let dir = this._root;
     let partialPath = '/'
-    for (let part of path.split(filepath)) {
+    let parts = path.split(filepath)
+    for (let i = 0; i < parts.length; ++ i) {
+      let part = parts[i];
       dir = dir.get(part);
       if (!dir) throw new ENOENT(filepath);
       // Follow symlinks
-      if (follow) {
+      if (follow || i < parts.length - 1) {
         const stat = dir.get(STAT)
         if (stat.type === 'symlink') {
           let target = stat.target
