@@ -18,7 +18,7 @@ describe("http fallback", () => {
     it("read root dir", done => {
       fs.readdir("/", (err, data) => {
         expect(err).toBe(null);
-        expect(data).toEqual(['0', '1', 'a.txt', 'b.txt', 'c.txt'])
+        expect(data).toEqual(['0', '1', '2', 'a.txt', 'b.txt', 'c.txt'])
         done();
       });
     });
@@ -56,6 +56,16 @@ describe("http fallback", () => {
         expect(err).toBe(null);
         expect(data).toEqual('Hello from "d"');
         done();
+      });
+    });
+    it("make a symlink and read file /2/a.txt through it", done => {
+      fs.symlink("a.txt", "/2/symlink.txt", (err) => {
+        expect(err).toBe(null);
+        fs.readFile("/2/symlink.txt", 'utf8', (err, data) => {
+          expect(err).toBe(null);
+          expect(data).toEqual('Hello from "a"');
+          done();
+        });
       });
     });
   });

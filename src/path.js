@@ -7,6 +7,18 @@ function normalizePath(path) {
   return joinPath(...parts);
 }
 
+function resolvePath(...paths) {
+  let result = '';
+  for (let path of paths) {
+    if (path.startsWith('/')) {
+      result = path;
+    } else {
+      result = normalizePath(joinPath(result, path));
+    }
+  }
+  return result;
+}
+
 function joinPath(...parts) {
   if (parts.length === 0) return "";
   let path = parts.join("/");
@@ -91,4 +103,5 @@ module.exports = {
   split: splitPath,
   basename,
   dirname,
+  resolve: resolvePath,
 };

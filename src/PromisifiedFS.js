@@ -168,6 +168,11 @@ module.exports = class PromisifiedFS {
       if (!this._urlauto) throw e
     }
     if (!data && this._http) {
+      let lstat = this._cache.lstat(filepath)
+      while (lstat.type === 'symlink') {
+        filepath = path.resolve(path.dirname(filepath), lstat.target)
+        lstat = this._cache.lstat(filepath)
+      }
       data = await this._http.readFile(filepath)
     }
     if (data) {
