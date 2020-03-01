@@ -83,7 +83,7 @@ Remove directory
 
 Read directory
 
-The callback return value is an Array of strings.
+The callback return value is an Array of strings. NOTE: _To save time, it is NOT SORTED._ (Fun fact: Node.js' `readdir` output is not guaranteed to be sorted either. I learned that the hard way.)
 
 ### `fs.writeFile(filepath, data, opts?, cb)`
 
