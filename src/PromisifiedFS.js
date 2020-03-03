@@ -69,7 +69,7 @@ module.exports = class PromisifiedFS {
     // but there might not be any other fs operations needed until later. Therefore we
     // need to attempt to release the mutex
     this._activate().then(() => {
-      if (this._operations.size === 0) {
+      if (this._operations.size === 0 && !this._deactivationTimeout) {
         this._deactivationTimeout = setTimeout(this._deactivate.bind(this), 100)
       }
     })
@@ -89,6 +89,7 @@ module.exports = class PromisifiedFS {
         this._operations.delete(op)
         if (mutating) this.saveSuperblock() // this is debounced
         if (this._operations.size === 0) {
+          if (!this._deactivationTimeout) clearTimeout(this._deactivationTimeout)
           this._deactivationTimeout = setTimeout(this._deactivate.bind(this), 500)
         }
       }
