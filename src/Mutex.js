@@ -1,8 +1,5 @@
 const idb = require("@isomorphic-git/idb-keyval");
 
-const clock = require('./clock.js');
-let i = 0;
-
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
 module.exports = class Mutex {
@@ -57,15 +54,10 @@ module.exports = class Mutex {
   }
   // check at 10Hz, give up after 10 minutes
   async wait ({ interval = 100, limit = 6000, ttl } = {}) {
-    const stop = clock(`wait ${i++}`);
     while (limit--) {
-      if (await this.acquire({ ttl })) {
-        stop();
-        return true
-      }
+      if (await this.acquire({ ttl })) return true
       await sleep(interval)
     }
-    stop();
     throw new Error('Mutex timeout')
   }
   // Returns true if successful
@@ -73,7 +65,6 @@ module.exports = class Mutex {
     let success
     let doubleFree
     let someoneElseHasIt
-    const stop = clock(`release ${i++}`);
     await idb.update("lock", (current) => {
       success = force || (current && current.holder === this._id)
       doubleFree = current === void 0
@@ -82,7 +73,6 @@ module.exports = class Mutex {
       return this._lock
     }, this._store)
     await idb.close(this._store)
-    stop();
     if (!success && !force) {
       if (doubleFree) throw new Error('Mutex double-freed')
       if (someoneElseHasIt) throw new Error('Mutex lost ownership')
