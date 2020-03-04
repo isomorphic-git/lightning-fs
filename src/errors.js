@@ -16,5 +16,6 @@ const EEXIST = Err("EEXIST");
 const ENOENT = Err("ENOENT");
 const ENOTDIR = Err("ENOTDIR");
 const ENOTEMPTY = Err("ENOTEMPTY");
+const ETIMEDOUT = Err("ETIMEDOUT");
 
-module.exports = { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY };
+module.exports = { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY, ETIMEDOUT };

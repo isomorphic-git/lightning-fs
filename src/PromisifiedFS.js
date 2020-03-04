@@ -3,7 +3,7 @@ const debounce = require("just-debounce-it");
 
 const Stat = require("./Stat.js");
 const CacheFS = require("./CacheFS.js");
-const { ENOENT, ENOTEMPTY } = require("./errors.js");
+const { ENOENT, ENOTEMPTY, ETIMEDOUT } = require("./errors.js");
 const IdbBackend = require("./IdbBackend.js");
 const HttpBackend = require("./HttpBackend.js")
 const Mutex = require("./Mutex.js");
@@ -102,9 +102,14 @@ module.exports = class PromisifiedFS {
       this._deactivationTimeout = null
     }
     if (this._deactivationPromise) await this._deactivationPromise
-    if (!this._activationPromise) this._activationPromise = this.__activate()
     this._deactivationPromise = null
-    return this._activationPromise
+    if (!this._activationPromise) this._activationPromise = this.__activate()
+    await this._activationPromise
+    if (await this._mutex.has()) {
+      return
+    } else {
+      throw new ETIMEDOUT()
+    }
   }
   async __activate() {
     if (this._cache.activated) return
@@ -114,7 +119,7 @@ module.exports = class PromisifiedFS {
       await this._idb.wipe()
       await this._mutex.release({ force: true })
     }
-    if (!this._mutex.has()) await this._mutex.wait()
+    if (!(await this._mutex.has())) await this._mutex.wait()
     // Attempt to load FS from IDB backend
     const root = await this._idb.loadSuperblock()
     if (root) {
@@ -136,7 +141,7 @@ module.exports = class PromisifiedFS {
     return this._deactivationPromise
   }
   async __deactivate() {
-    if (await this._mutex.check()) {
+    if (await this._mutex.has()) {
       await this._saveSuperblock()
     }
     this._cache.deactivate()
