@@ -7,6 +7,7 @@ const { ENOENT, ENOTEMPTY } = require("./errors.js");
 const IdbBackend = require("./IdbBackend.js");
 const HttpBackend = require("./HttpBackend.js")
 const Mutex = require("./Mutex.js");
+const Mutex2 = require("./Mutex2.js");
 
 const path = require("./path.js");
 const clock = require("./clock.js");
@@ -36,7 +37,7 @@ module.exports = class PromisifiedFS {
   constructor(name, { wipe, url, urlauto } = {}) {
     this._name = name
     this._idb = new IdbBackend(name);
-    this._mutex = new Mutex(name);
+    this._mutex = navigator.locks ? new Mutex2(name) : new Mutex(name);
     this._cache = new CacheFS(name);
     this._opts = { wipe, url };
     this._needsWipe = !!wipe;
@@ -135,9 +136,15 @@ module.exports = class PromisifiedFS {
     return this._deactivationPromise
   }
   async __deactivate() {
-    await this._saveSuperblock()
+    if (await this._mutex.check()) {
+      await this._saveSuperblock()
+    }
     this._cache.deactivate()
-    await this._mutex.release()
+    try {
+      await this._mutex.release()
+    } catch (e) {
+      console.log(e)
+    }
     await this._idb.close()
   }
   async _saveSuperblock() {
