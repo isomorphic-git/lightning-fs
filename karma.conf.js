@@ -71,44 +71,60 @@ module.exports = function (config) {
       XXXsl_chrome: {
         base: 'SauceLabs',
         browserName: 'chrome',
-        extendedDebugging: true
+        extendedDebugging: true,
       },
-      sl_firefox: {
+      XXXsl_firefox: {
         base: 'SauceLabs',
-        browserName: 'firefox'
+        browserName: 'firefox',
       },
       sl_edge: {
         base: 'SauceLabs',
-        browserName: 'MicrosoftEdge'
+        browserName: 'MicrosoftEdge',
+        version: '79.0',
       },
       sl_safari: {
         base: 'SauceLabs',
-        browserName: 'safari'
+        browserName: 'safari',
+        platform: 'macOS 10.15',
+        version: '13.0',
       },
       sl_ios_safari: {
         base: 'SauceLabs',
-        deviceName: 'iPhone X Simulator',
+        deviceName: 'iPhone 11 Pro Max Simulator',
         platformName: 'iOS',
-        platformVersion: '11.2',
+        platformVersion: '13.0',
         browserName: 'Safari',
-        appiumVersion: '1.9.1'
+        appiumVersion: '1.15.0',
       },
-      sl_android_chrome: {
+      XXXsl_android_chrome: {
         base: 'SauceLabs',
+        deviceOrientation: 'portrait',
         deviceName: 'Android GoogleAPI Emulator',
         platformName: 'Android',
         platformVersion: '7.1',
         browserName: 'Chrome',
-        appiumVersion: '1.9.1'
+        appiumVersion: '1.15.0',
+      },
+      bs_android_chrome: {
+        base: 'BrowserStack',
+        os: 'android',
+        os_version: '10.0',
+        browser: 'android',
+        device: 'Google Pixel 4',
+        real_mobile: true,
       },
       FirefoxHeadless: {
         base: 'Firefox',
-        flags: ['-headless']
+        flags: ['-headless'],
       },
       ChromeHeadlessNoSandbox: {
         base: 'ChromeHeadless',
-        flags: ['--no-sandbox']
-      }
+        flags: ['--no-sandbox'],
+      },
+      ChromeCanaryHeadlessNoSandbox: {
+        base: 'ChromeCanaryHeadless',
+        flags: ['--no-sandbox'],
+      },
     },
     sauceLabs: {
       // Since tags aren't being sent correctly, I'm going to stick the branch name in here.
@@ -121,7 +137,7 @@ module.exports = function (config) {
       tags: [ISSUE],
       recordScreenshots: false,
       recordVideo: false,
-      public: 'public restricted'
+      public: 'public restricted',
     },
     concurrency: 5,
     // Continuous Integration mode
@@ -138,8 +154,10 @@ module.exports = function (config) {
       devtool: 'inline-source-map',
     },
     plugins: [
+      'karma-browserstack-launcher',
       'karma-chrome-launcher',
       'karma-edge-launcher',
+      'karma-ie-launcher',
       'karma-safari-launcher',
       'karma-firefox-launcher',
       'karma-jasmine',
