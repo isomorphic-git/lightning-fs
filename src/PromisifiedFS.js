@@ -3,10 +3,11 @@ const debounce = require("just-debounce-it");
 
 const Stat = require("./Stat.js");
 const CacheFS = require("./CacheFS.js");
-const { ENOENT, ENOTEMPTY } = require("./errors.js");
+const { ENOENT, ENOTEMPTY, ETIMEDOUT } = require("./errors.js");
 const IdbBackend = require("./IdbBackend.js");
 const HttpBackend = require("./HttpBackend.js")
 const Mutex = require("./Mutex.js");
+const Mutex2 = require("./Mutex2.js");
 
 const path = require("./path.js");
 const clock = require("./clock.js");
@@ -36,7 +37,7 @@ module.exports = class PromisifiedFS {
   constructor(name, { wipe, url, urlauto } = {}) {
     this._name = name
     this._idb = new IdbBackend(name);
-    this._mutex = new Mutex(name);
+    this._mutex = navigator.locks ? new Mutex2(name) : new Mutex(name);
     this._cache = new CacheFS(name);
     this._opts = { wipe, url };
     this._needsWipe = !!wipe;
@@ -101,9 +102,14 @@ module.exports = class PromisifiedFS {
       this._deactivationTimeout = null
     }
     if (this._deactivationPromise) await this._deactivationPromise
-    if (!this._activationPromise) this._activationPromise = this.__activate()
     this._deactivationPromise = null
-    return this._activationPromise
+    if (!this._activationPromise) this._activationPromise = this.__activate()
+    await this._activationPromise
+    if (await this._mutex.has()) {
+      return
+    } else {
+      throw new ETIMEDOUT()
+    }
   }
   async __activate() {
     if (this._cache.activated) return
@@ -113,7 +119,7 @@ module.exports = class PromisifiedFS {
       await this._idb.wipe()
       await this._mutex.release({ force: true })
     }
-    if (!this._mutex.has()) await this._mutex.wait()
+    if (!(await this._mutex.has())) await this._mutex.wait()
     // Attempt to load FS from IDB backend
     const root = await this._idb.loadSuperblock()
     if (root) {
@@ -135,9 +141,15 @@ module.exports = class PromisifiedFS {
     return this._deactivationPromise
   }
   async __deactivate() {
-    await this._saveSuperblock()
+    if (await this._mutex.has()) {
+      await this._saveSuperblock()
+    }
     this._cache.deactivate()
-    await this._mutex.release()
+    try {
+      await this._mutex.release()
+    } catch (e) {
+      console.log(e)
+    }
     await this._idb.close()
   }
   async _saveSuperblock() {
