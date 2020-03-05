@@ -9,10 +9,10 @@ module.exports = class Mutex {
     this._store = new idb.Store(this._database + "_lock", this._database + "_lock")
     this._lock = null
   }
-  async has () {
+  async has ({ margin = 2000 } = {}) {
     if (this._lock && this._lock.holder === this._id) {
       const now = Date.now()
-      if (this._lock.expires > now) {
+      if (this._lock.expires > now + margin) {
         return true
       } else {
         return await this.renew()
