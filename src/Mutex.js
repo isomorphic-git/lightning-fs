@@ -3,10 +3,11 @@ const idb = require("@isomorphic-git/idb-keyval");
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
 module.exports = class Mutex {
-  constructor(name) {
+  constructor(dbname, storename) {
     this._id = Math.random()
-    this._database = name
-    this._store = new idb.Store(this._database + "_lock", this._database + "_lock")
+    this._database = dbname
+    this._storename = storename
+    this._store = new idb.Store(this._database, this._storename)
     this._lock = null
   }
   async has ({ margin = 2000 } = {}) {

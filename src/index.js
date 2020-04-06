@@ -28,6 +28,9 @@ module.exports = class FS {
     this.symlink = this.symlink.bind(this)
     this.backFile = this.backFile.bind(this)
   }
+  init(name, options) {
+    this.promises.init(name, options)
+  }
   readFile(filepath, opts, cb) {
     const [resolve, reject] = wrapCallback(opts, cb);
     this.promises.readFile(filepath, opts).then(resolve).catch(reject)
