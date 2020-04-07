@@ -49,7 +49,7 @@ While the mutex is being held by another thread, any fs operations will be stuck
 ### `new FS(name, opts?)`
 First, create or open a "filesystem". (The name is used to determine the IndexedDb store name.)
 
-```
+```js
 import FS from '@isomorphic-git/lightning-fs';
 
 const fs = new FS("testfs")
@@ -59,11 +59,32 @@ const fs = new FS("testfs")
 
 Options object:
 
-| Param     | Type [= default]   | Description                                                           |
-| --------- | ------------------ | --------------------------------------------------------------------- |
-| `wipe`    | boolean = false    | Delete the database and start with an empty filesystem                |
-| `url`     | string = undefined | Let `readFile` requests fall back to an HTTP request to this base URL |
-| `urlauto` | boolean = false    | Fall back to HTTP for every read of a missing file, even if unbacked  |
+| Param           | Type [= default]   | Description                                                           |
+| --------------- | ------------------ | --------------------------------------------------------------------- |
+| `wipe`          | boolean = false    | Delete the database and start with an empty filesystem                |
+| `url`           | string = undefined | Let `readFile` requests fall back to an HTTP request to this base URL |
+| `urlauto`       | boolean = false    | Fall back to HTTP for every read of a missing file, even if unbacked  |
+| `fileDbName`    | string             | Customize the database name                                           |
+| `fileStoreName` | string             | Customize the store name                                              |
+| `lockDbName`    | string             | Customize the database name for the lock mutex                        |
+| `lockStoreName` | string             | Customize the store name for the lock mutex                           |
+
+#### Advanced usage
+
+You can procrastinate initializing the FS object until later.
+And, if you're really adventurous, you can _re-initialize_ it with a different name to switch between IndexedDb databases.
+
+```js
+import FS from '@isomorphic-git/lightning-fs';
+
+const fs = new FS()
+
+// Some time later...
+fs.init(name, options)
+
+// Some time later...
+fs.init(different_name, different_options)
+```
 
 ### `fs.mkdir(filepath, opts?, cb)`
 
@@ -157,9 +178,9 @@ Note that stat data is made automatically from the file `/.superblock.txt` if fo
 
 Options object:
 
-| Param      | Type [= default]   | Description                      |
-| ---------- | ------------------ | -------------------------------- |
-| `mode`     | number = 0o666     | Posix mode permissions           |
+| Param  | Type [= default] | Description            |
+| ------ | ---------------- | ---------------------- |
+| `mode` | number = 0o666   | Posix mode permissions |
 
 ### `fs.promises`
 
