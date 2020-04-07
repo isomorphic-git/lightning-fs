@@ -126,6 +126,7 @@ module.exports = class PromisifiedFS {
     }
   }
   async _activate() {
+    if (!this._initPromise) console.warn(new Error(`Attempted to use LightningFS ${this._name} before it was initialized.`))
     await this._initPromise
     if (this._deactivationTimeout) {
       clearTimeout(this._deactivationTimeout)
