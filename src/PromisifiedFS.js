@@ -34,22 +34,8 @@ function cleanParams2(oldFilepath, newFilepath) {
 }
 
 module.exports = class PromisifiedFS {
-  constructor(name, { wipe, url, urlauto } = {}) {
-    this._name = name
-    this._idb = new IdbBackend(name);
-    this._mutex = navigator.locks ? new Mutex2(name) : new Mutex(name);
-    this._cache = new CacheFS(name);
-    this._opts = { wipe, url };
-    this._needsWipe = !!wipe;
-    this.saveSuperblock = debounce(() => {
-      this._saveSuperblock();
-    }, 500);
-    if (url) {
-      this._http = new HttpBackend(url)
-      this._urlauto = !!urlauto
-    }
-    this._operations = new Set()
-
+  constructor(name, options) {
+    this.init = this.init.bind(this)
     this.readFile = this._wrap(this.readFile, false)
     this.writeFile = this._wrap(this.writeFile, true)
     this.unlink = this._wrap(this.unlink, true)
@@ -63,17 +49,60 @@ module.exports = class PromisifiedFS {
     this.symlink = this._wrap(this.symlink, true)
     this.backFile = this._wrap(this.backFile, true)
 
+    this.saveSuperblock = debounce(() => {
+      this._saveSuperblock();
+    }, 500);
+
     this._deactivationPromise = null
     this._deactivationTimeout = null
     this._activationPromise = null
+
+    this._operations = new Set()
+
+    if (name) {
+      this.init(name, options)
+    }
+  }
+  async init (...args) {
+    if (this._initPromiseResolve) await this._initPromise;
+    this._initPromise = this._init(...args)
+    return this._initPromise
+  }
+  async _init (name, {
+    wipe,
+    url,
+    urlauto,
+    fileDbName = name,
+    fileStoreName = name + "_files",
+    lockDbName = name + "_lock",
+    lockStoreName = name + "_lock",
+  } = {}) {
+    await this._gracefulShutdown()
+    this._name = name
+    this._idb = new IdbBackend(fileDbName, fileStoreName);
+    this._mutex = navigator.locks ? new Mutex2(name) : new Mutex(lockDbName, lockStoreName);
+    this._cache = new CacheFS(name);
+    this._opts = { wipe, url };
+    this._needsWipe = !!wipe;
+    if (url) {
+      this._http = new HttpBackend(url)
+      this._urlauto = !!urlauto
+    }
+    if (this._initPromiseResolve) {
+      this._initPromiseResolve();
+      this._initPromiseResolve = null;
+    }
     // The fs is initially activated when constructed (in order to wipe/save the superblock)
-    // but there might not be any other fs operations needed until later. Therefore we
-    // need to attempt to release the mutex
-    this._activate().then(() => {
-      if (this._operations.size === 0 && !this._deactivationTimeout) {
-        this._deactivationTimeout = setTimeout(this._deactivate.bind(this), 100)
-      }
-    })
+    // This is not awaited, because that would create a cycle.
+    this.stat('/')
+  }
+  async _gracefulShutdown () {
+    if (this._operations.size > 0) {
+      this._isShuttingDown = true
+      await new Promise(resolve => this._gracefulShutdownResolve = resolve);
+      this._isShuttingDown = false
+      this._gracefulShutdownResolve = null
+    }
   }
   _wrap (fn, mutating) {
     let i = 0
@@ -97,6 +126,8 @@ module.exports = class PromisifiedFS {
     }
   }
   async _activate() {
+    if (!this._initPromise) console.warn(new Error(`Attempted to use LightningFS ${this._name} before it was initialized.`))
+    await this._initPromise
     if (this._deactivationTimeout) {
       clearTimeout(this._deactivationTimeout)
       this._deactivationTimeout = null
@@ -138,6 +169,7 @@ module.exports = class PromisifiedFS {
     if (this._activationPromise) await this._activationPromise
     if (!this._deactivationPromise) this._deactivationPromise = this.__deactivate()
     this._activationPromise = null
+    if (this._gracefulShutdownResolve) this._gracefulShutdownResolve()
     return this._deactivationPromise
   }
   async __deactivate() {

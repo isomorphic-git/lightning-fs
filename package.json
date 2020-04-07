@@ -16,7 +16,7 @@
     "semantic-release": "semantic-release"
   },
   "dependencies": {
-    "@isomorphic-git/idb-keyval": "^3.3.1",
+    "@isomorphic-git/idb-keyval": "3.3.2",
     "isomorphic-textencoder": "1.0.1",
     "just-debounce-it": "1.1.0",
     "just-once": "1.1.0"
