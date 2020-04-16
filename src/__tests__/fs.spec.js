@@ -444,4 +444,34 @@ describe("fs module", () => {
     });
   });
 
+  describe("du", () => {
+    it("du returns the total file size of a path", done => {
+      fs.mkdir("/du", () => {
+        fs.writeFile("/du/a.txt", "hello", () => {
+          fs.writeFile("/du/b.txt", "hello", () => {
+            fs.mkdir("/du/sub", () => {
+              fs.writeFile("/du/sub/a.txt", "hello", () => {
+                fs.writeFile("/du/sub/b.txt", "hello", () => {
+                  fs.du("/du/sub/a.txt", (err, size) => {
+                    expect(err).toBe(null)
+                    expect(size).toBe(5)
+                    fs.du("/du/sub", (err, size) => {
+                      expect(err).toBe(null)
+                      expect(size).toBe(10)
+                      fs.du("/du", (err, size) => {
+                        expect(err).toBe(null)
+                        expect(size).toBe(20)
+                        done();
+                      });
+                    });
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+
 });
