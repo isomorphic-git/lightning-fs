@@ -182,6 +182,10 @@ Options object:
 | ------ | ---------------- | ---------------------- |
 | `mode` | number = 0o666   | Posix mode permissions |
 
+### `fs.du(filepath, cb)`
+
+Returns the size of a file or directory in bytes.
+
 ### `fs.promises`
 
 All the same functions as above, but instead of passing a callback they return a promise.

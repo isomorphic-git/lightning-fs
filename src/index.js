@@ -15,6 +15,7 @@ module.exports = class FS {
   constructor(...args) {
     this.promises = new PromisifiedFS(...args)
     // Needed so things don't break if you destructure fs and pass individual functions around
+    this.init = this.init.bind(this)
     this.readFile = this.readFile.bind(this)
     this.writeFile = this.writeFile.bind(this)
     this.unlink = this.unlink.bind(this)
@@ -27,6 +28,7 @@ module.exports = class FS {
     this.readlink = this.readlink.bind(this)
     this.symlink = this.symlink.bind(this)
     this.backFile = this.backFile.bind(this)
+    this.du = this.du.bind(this)
   }
   init(name, options) {
     this.promises.init(name, options)
@@ -78,5 +80,9 @@ module.exports = class FS {
   backFile(filepath, opts, cb) {
     const [resolve, reject] = wrapCallback(opts, cb);
     this.promises.backFile(filepath, opts).then(resolve).catch(reject);
+  }
+  du(filepath, cb) {
+    const [resolve, reject] = wrapCallback(cb);
+    this.promises.du(filepath).then(resolve).catch(reject);
   }
 }
