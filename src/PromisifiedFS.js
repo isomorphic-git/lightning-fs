@@ -48,6 +48,7 @@ module.exports = class PromisifiedFS {
     this.readlink = this._wrap(this.readlink, false)
     this.symlink = this._wrap(this.symlink, true)
     this.backFile = this._wrap(this.backFile, true)
+    this.du = this._wrap(this.du, false);
 
     this.saveSuperblock = debounce(() => {
       this._saveSuperblock();
@@ -302,5 +303,8 @@ module.exports = class PromisifiedFS {
     let size = await this._http.sizeFile(filepath)
     await this._writeStat(filepath, size, opts)
     return null
+  }
+  async du(filepath) {
+    return this._cache.du(filepath);
   }
 }

@@ -248,4 +248,19 @@ module.exports = class CacheFS {
     dir.set(basename, entry);
     return stat;
   }
+  _du (dir) {
+    let size = 0;
+    for (const [name, entry] of dir.entries()) {
+      if (name === STAT) {
+        size += entry.size;
+      } else {
+        size += this._du(entry);
+      }
+    }
+    return size;
+  }
+  du (filepath) {
+    let dir = this._lookup(filepath);
+    return this._du(dir);
+  }
 };
