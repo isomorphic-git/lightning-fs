@@ -446,4 +446,31 @@ describe("fs.promises module", () => {
     });
   });
 
+  describe("du", () => {
+    it("du returns the total file size of a path", done => {
+      fs.mkdir("/du").finally(() => {
+        fs.writeFile("/du/a.txt", "hello").then(() => {
+          fs.writeFile("/du/b.txt", "hello").then(() => {
+            fs.mkdir("/du/sub").then(() => {
+              fs.writeFile("/du/sub/a.txt", "hello").then(() => {
+                fs.writeFile("/du/sub/b.txt", "hello").then(() => {
+                  fs.du("/du/sub/a.txt").then(size => {
+                    expect(size).toBe(5)
+                    fs.du("/du/sub").then(size => {
+                      expect(size).toBe(10)
+                      fs.du("/du").then(size => {
+                        expect(size).toBe(20)
+                        done();
+                      });
+                    });
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+
 });
