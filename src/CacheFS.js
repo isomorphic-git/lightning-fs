@@ -228,7 +228,7 @@ module.exports = class CacheFS {
       ino = oldStat.ino;
     } catch (err) {}
     if (mode == null) {
-      mode = 0o666;
+      mode = 0o120000;
     }
     if (ino == null) {
       ino = this.autoinc();

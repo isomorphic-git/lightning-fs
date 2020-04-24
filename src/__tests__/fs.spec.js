@@ -390,6 +390,19 @@ describe("fs module", () => {
         });
       });
     });
+    it("lstat for symlink creates correct mode", done => {
+      fs.mkdir("/symlink", () => {
+        fs.writeFile("/symlink/a.txt", "hello", () => {
+          fs.symlink("/symlink/a.txt", "/symlink/b.txt", () => {
+            fs.lstat("/symlink/b.txt", (err, stat) => {
+              expect(err).toBe(null)
+              expect(stat.mode).toBe(0o120000)
+							done();
+            });
+          });
+        });
+      });
+    });
     it("lstat doesn't follow symlinks", done => {
       fs.mkdir("/symlink", () => {
         fs.mkdir("/symlink/lstat", () => {
