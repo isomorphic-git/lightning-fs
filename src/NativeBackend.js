@@ -1,6 +1,5 @@
 const path = require("./path.js");
-const Stat = require("./Stat.js");
-const { ENOENT, EEXIST, ENOTEMPTY } = require("./errors.js");
+const { ENOENT, EEXIST, ENOTEMPTY, ENOTDIR } = require("./errors.js");
 
 function cleanParams(filepath, opts = {}) {
   // normalize paths
@@ -15,38 +14,12 @@ function cleanParams(filepath, opts = {}) {
 }
 
 module.exports = class NativeFS {
-  constructor(name, opts = {}) {
-    this._name = name
-    this._root = new Promise(async (resolve, reject) => {
-      if (opts.nativeDirectoryHandle) {
-        return resolve(opts.nativeDirectoryHandle)
-      } else if (opts.nativeSandbox) {
-        let dh = await FileSystemDirectoryHandle.getSystemDirectory({ type: 'sandbox' })
-        return resolve(dh)
-      } else {
-        this._readyCallback = { resolve, reject }
-      }
-    })
-    this._lookupDir = this._lookupDir.bind(this)
-    this._lookupFile = this._lookupFile.bind(this)
-    this._lookupUnknown = this._lookupUnknown.bind(this)
-    this.readFile = this.readFile.bind(this)
-    this.writeFile = this.writeFile.bind(this)
-    this.unlink = this.unlink.bind(this)
-    this.readdir = this.readdir.bind(this)
-    this.mkdir = this.mkdir.bind(this)
-    this.rmdir = this.rmdir.bind(this)
-    this.rename = this.rename.bind(this)
-    this.stat = this.stat.bind(this)
-    this.lstat = this.lstat.bind(this)
-    this.readlink = this.readlink.bind(this)
-    this.symlink = this.symlink.bind(this)
-  }
-  async openDirectory () {
-    let root = await window.chooseFileSystemEntries({ type: 'openDirectory' })
-    this._readyCallback.resolve(root)
+  constructor(nativeDirectoryHandle) {
+    this._root = nativeDirectoryHandle
   }
   async _lookupDir(filepath) {
+    if (filepath === '/') return this._root
+
     let dir = await this._root;
     const parts = path.split(filepath)
     if (parts[0] === '/') parts.shift()
@@ -55,6 +28,9 @@ module.exports = class NativeFS {
       try {
         dir = await dir.getDirectory(part);
       } catch (e) {
+        if (e.message === 'The path supplied exists, but was not an entry of requested type.') {
+          throw new ENOTDIR(filepath);
+        }
         throw new ENOENT(filepath);
       }
     }
@@ -72,6 +48,8 @@ module.exports = class NativeFS {
     }
   }
   async _lookupUnknown(filepath) {
+    if (filepath === '/') return ['dir', this._root]
+
     const dirname = path.dirname(filepath)
     const basename = path.basename(filepath)
     const parent = await this._lookupDir(dirname)
@@ -147,9 +125,8 @@ module.exports = class NativeFS {
     const basename = path.basename(filepath)
     const dir = await this._lookupDir(dirname)
     const fh = await dir.getFile(basename, { create: true })
-    const writer = await fh.createWriter();
-    await writer.truncate(0);
-    await writer.write(0, data);
+    const writer = await fh.createWritable();
+    await writer.write(data);
     await writer.close();
   }
   async readFile(filepath, opts) {
@@ -175,13 +152,15 @@ module.exports = class NativeFS {
     }
     await dir.removeEntry(basename)
   }
-  async rename(...args) {
-    return this.call('rename', ...args)
+  async rename(oldFilepath, newFilepath) {
+    // TODO: This could be heavily optimized to reduce memory by piping and the newer writeable stream api
+    let tmp = await this.readFile(oldFilepath)
+    await this.writeFile(newFilepath, tmp)
   }
   async stat(filepath) {
     filepath = path.normalize(filepath);
     let [type, h] = await this._lookupUnknown(filepath)
-    return new Stat({
+    return {
       type,
       mode: 0o644, // make something up
       size: h.size,
@@ -191,7 +170,7 @@ module.exports = class NativeFS {
       uid: 1,
       gid: 1,
       dev: 1,
-    })
+    }
   }
   async lstat(...args) {
     return this.stat(...args)
