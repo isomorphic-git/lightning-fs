@@ -37,6 +37,7 @@ function cleanParams2(oldFilepath, newFilepath) {
 module.exports = class PromisifiedFS {
   constructor(name, options) {
     this.init = this.init.bind(this)
+    this.getNativeFileHandle = this.getNativeFileHandle.bind(this)
     this.readFile = this._wrap(this.readFile, false)
     this.writeFile = this._wrap(this.writeFile, true)
     this.unlink = this._wrap(this.unlink, true)

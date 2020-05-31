@@ -16,10 +16,21 @@ function cleanParams(filepath, opts = {}) {
 module.exports = class NativeFS {
   constructor(nativeDirectoryHandle) {
     this._root = nativeDirectoryHandle
+    this._dircache = new Map()
+    this._filecache = new Map()
   }
   async _lookupDir(filepath) {
     if (filepath === '/') return this._root
+    if (this._dircache.has(filepath)) return await this._dircache.get(filepath)
 
+    let promise = this.__lookupDir(filepath)
+    this._dircache.set(filepath, promise)
+
+    let dir = await promise
+    this._dircache.set(filepath, dir)
+    return dir;
+  }
+  async __lookupDir(filepath) {
     let dir = await this._root;
     const parts = path.split(filepath)
     if (parts[0] === '/') parts.shift()
@@ -37,6 +48,16 @@ module.exports = class NativeFS {
     return dir;
   }
   async _lookupFile(filepath) {
+    if (this._filecache.has(filepath)) return await this._filecache.get(filepath)
+
+    let promise = this.__lookupFile(filepath)
+    this._filecache.set(filepath, promise)
+
+    let fh = await promise
+    this._filecache.set(filepath, fh)
+    return fh
+  }
+  async __lookupFile(filepath) {
     const dirname = path.dirname(filepath)
     const basename = path.basename(filepath)
     const dir  = await this._lookupDir(dirname)
@@ -82,7 +103,8 @@ module.exports = class NativeFS {
       if (exists) {
         throw new EEXIST(filepath)
       } else {
-        await dir.getDirectory(basename, { create: true })
+        let newDir = await dir.getDirectory(basename, { create: true })
+        this._dircache.set(filepath, newDir)
       }
     }
   }
@@ -99,6 +121,7 @@ module.exports = class NativeFS {
     }
     try {
       await dir.removeEntry(basename, { recursive })
+      this._dircache.delete(filepath)
     } catch (e) {
       if (!recursive) {
         throw new ENOTEMPTY(filepath)
@@ -128,6 +151,7 @@ module.exports = class NativeFS {
     const writer = await fh.createWritable();
     await writer.write(data);
     await writer.close();
+    this._filecache.set(filepath, fh)
   }
   async readFile(filepath, opts) {
     ;[filepath, opts] = cleanParams(filepath, opts)
@@ -147,15 +171,14 @@ module.exports = class NativeFS {
     const dir = await this._lookupDir(dirname)
     try {
       await dir.getFile(basename)
+      this._filecache.delete(filepath)
     } catch (e) {
       throw new ENOENT(filepath)
     }
     await dir.removeEntry(basename)
   }
   async rename(oldFilepath, newFilepath) {
-    // TODO: This could be heavily optimized to reduce memory by piping and the newer writeable stream api
-    let tmp = await this.readFile(oldFilepath)
-    await this.writeFile(newFilepath, tmp)
+    throw new Error('TODO: rename isnt implemented yet for NativeBackend')
   }
   async stat(filepath) {
     filepath = path.normalize(filepath);
@@ -165,8 +188,8 @@ module.exports = class NativeFS {
       mode: 0o644, // make something up
       size: h.size,
       ino: 1,
-      mtimeMs: h.lastModified,
-      ctimeMs: h.lastModified,
+      mtimeMs: h.lastModified || 0,
+      ctimeMs: h.lastModified || 0,
       uid: 1,
       gid: 1,
       dev: 1,
