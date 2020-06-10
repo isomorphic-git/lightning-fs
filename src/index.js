@@ -12,6 +12,14 @@ function wrapCallback (opts, cb) {
 }
 
 module.exports = class FS {
+  static register(name, backend) {
+    PromisifiedFS.register(name, backend)
+  }
+
+  static unregister(name) {
+    return PromisifiedFS.unregister(name)
+  }
+
   constructor(...args) {
     this.promises = new PromisifiedFS(...args)
     // Needed so things don't break if you destructure fs and pass individual functions around

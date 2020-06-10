@@ -1,9 +1,9 @@
 const idb = require("@isomorphic-git/idb-keyval");
 
 module.exports = class IdbBackend {
-  constructor(dbname, storename) {
+  constructor(dbname, options) {
     this._database = dbname;
-    this._storename = storename;
+    this._storename = (options && options.storename) || (dbname + "_files");
     this._store = new idb.Store(this._database, this._storename);
   }
   saveSuperblock(superblock) {

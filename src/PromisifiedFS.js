@@ -34,6 +34,16 @@ function cleanParams2(oldFilepath, newFilepath) {
 }
 
 module.exports = class PromisifiedFS {
+  static register(name, backend) {
+    if (!this.prototype.backends) this.prototype.backends = {};
+    this.prototype.backends[name] = backend;
+  }
+
+  static unregister(name) {
+    if (this.prototype.backends)
+      return delete this.prototype.backends[name];
+  }
+
   constructor(name, options) {
     this.init = this.init.bind(this)
     this.readFile = this._wrap(this.readFile, false)
@@ -73,6 +83,7 @@ module.exports = class PromisifiedFS {
     wipe,
     url,
     urlauto,
+    database,
     fileDbName = name,
     fileStoreName = name + "_files",
     lockDbName = name + "_lock",
@@ -80,7 +91,8 @@ module.exports = class PromisifiedFS {
   } = {}) {
     await this._gracefulShutdown()
     this._name = name
-    this._idb = new IdbBackend(fileDbName, fileStoreName);
+    let Backend = (this.backends && this.backends[database]) || IdbBackend;
+    this._idb = new Backend(fileDbName, {storename: fileStoreName});
     this._mutex = navigator.locks ? new Mutex2(name) : new Mutex(lockDbName, lockStoreName);
     this._cache = new CacheFS(name);
     this._opts = { wipe, url };
