@@ -77,6 +77,7 @@ module.exports = class PromisifiedFS {
     fileStoreName = name + "_files",
     lockDbName = name + "_lock",
     lockStoreName = name + "_lock",
+    defer = false,
   } = {}) {
     await this._gracefulShutdown()
     this._name = name
@@ -93,9 +94,14 @@ module.exports = class PromisifiedFS {
       this._initPromiseResolve();
       this._initPromiseResolve = null;
     }
-    // The fs is initially activated when constructed (in order to wipe/save the superblock)
-    // This is not awaited, because that would create a cycle.
-    this.stat('/')
+    // The next comment starting with the "fs is initially activated when constructed"?
+    // That can create contention for the mutex if two threads try to init at the same time
+    // so I've added an option to disable that behavior.
+    if (!defer) {
+      // The fs is initially activated when constructed (in order to wipe/save the superblock)
+      // This is not awaited, because that would create a cycle.
+      this.stat('/')
+    }
   }
   async _gracefulShutdown () {
     if (this._operations.size > 0) {

@@ -68,6 +68,7 @@ Options object:
 | `fileStoreName` | string             | Customize the store name                                              |
 | `lockDbName`    | string             | Customize the database name for the lock mutex                        |
 | `lockStoreName` | string             | Customize the store name for the lock mutex                           |
+| `defer`         | boolean = false    | If true, avoids mutex contention during initialization                |
 
 #### Advanced usage
 
