@@ -7,7 +7,7 @@ jobs:
   steps:
   - task: NodeTool@0
     inputs:
-      versionSpec: '8.x'
+      versionSpec: '10.x'
     displayName: 'Install Node.js'
 
   - script: npm ci
@@ -54,7 +54,7 @@ jobs:
 
   - script: npm run semantic-release
     displayName: 'Publish to npm'
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
     env:
       GH_TOKEN: $(GITHUB_TOKEN)
       NPM_TOKEN: $(Npm.Token)
