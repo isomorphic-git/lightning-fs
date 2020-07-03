@@ -202,6 +202,8 @@ declare module '@isomorphic-git/lightning-fs' {
      * @param cb
      */
     du(filepath: string, cb: (err: Error, size: number) => void): void
+
+    readonly promises: PromisifiedFS
   }
   namespace FS {
     export interface Options {
@@ -242,7 +244,6 @@ declare module '@isomorphic-git/lightning-fs' {
        */
       defer?: boolean
 
-      readonly promises: PromisifiedFS
     }
     export interface MKDirOptions {
       /**
