@@ -91,7 +91,7 @@ declare module '@isomorphic-git/lightning-fs' {
      */
     du(filepath: string): Promise<number>
   }
-  export class FS {
+  class FS {
     /**
      * You can procrastinate initializing the FS object until later. And, if you're really adventurous, you can re-initialize it with a different name to switch between IndexedDb databases.
      */
