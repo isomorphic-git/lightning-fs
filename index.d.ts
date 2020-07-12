@@ -12,14 +12,14 @@ declare module '@isomorphic-git/lightning-fs' {
      * @param filepath
      * @param options
      */
-    mkdir(filepath: string, options: FS.MKDirOptions | undefined): Promise<void>
+    mkdir(filepath: string, options?: FS.MKDirOptions): Promise<void>
 
     /**
      * Remove directory
      * @param filepath
      * @param options
      */
-    rmdir(filepath: string, options: undefined): Promise<void>
+    rmdir(filepath: string, options?: undefined): Promise<void>
 
     /**
      * Read directory
@@ -29,18 +29,18 @@ declare module '@isomorphic-git/lightning-fs' {
      * @param options
      * @returns The file list.
      */
-    readdir(filepath: string, options: undefined): Promise<string[]>
+    readdir(filepath: string, options?: undefined): Promise<string[]>
 
-    writeFile(filepath: string, data: Uint8Array | string, options: FS.WriteFileOptions | undefined | string): Promise<void>
+    writeFile(filepath: string, data: Uint8Array | string, options?: FS.WriteFileOptions | string): Promise<void>
 
-    readFile(filepath: string, options: FS.ReadFileOptions | undefined | string): Promise<Uint8Array>
+    readFile(filepath: string, options?: FS.ReadFileOptions | string): Promise<Uint8Array>
 
     /**
      * Delete a file
      * @param filepath
      * @param options
      */
-    unlink(filepath: string, options: undefined): Promise<void>
+    unlink(filepath: string, options?: undefined): Promise<void>
 
     /**
      * Rename a file or directory
@@ -54,14 +54,14 @@ declare module '@isomorphic-git/lightning-fs' {
      * @param filepath
      * @param options
      */
-    stat(filepath: string, options: undefined): Promise<FS.Stats>
+    stat(filepath: string, options?: undefined): Promise<FS.Stats>
 
     /**
      * Like fs.stat except that paths to symlinks return the symlink stats not the file stats of the symlink's target.
      * @param filepath
      * @param options
      */
-    lstat(filepath: string, options: undefined): Promise<FS.Stats>
+    lstat(filepath: string, options?: undefined): Promise<FS.Stats>
 
     /**
      * Create a symlink at filepath that points to target.
@@ -76,14 +76,14 @@ declare module '@isomorphic-git/lightning-fs' {
      * @param options
      * @returns The link string.
      */
-    readlink(filepath: string, options: undefined): Promise<string>
+    readlink(filepath: string, options?: undefined): Promise<string>
 
     /**
      * Create or change the stat data for a file backed by HTTP. Size is fetched with a HEAD request. Useful when using an HTTP backend without urlauto set, as then files will only be readable if they have stat data. Note that stat data is made automatically from the file /.superblock.txt if found on the server. /.superblock.txt can be generated or updated with the included [standalone script](https://github.com/isomorphic-git/lightning-fs/blob/main/src/superblocktxt.js).
      * @param filepath
      * @param options
      */
-    backFile(filepath: string, options: FS.BackFileOptions | undefined): Promise<void>
+    backFile(filepath: string, options?: FS.BackFileOptions): Promise<void>
 
     /**
      * @param filepath
