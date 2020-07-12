@@ -12,14 +12,14 @@ declare module '@isomorphic-git/lightning-fs' {
      * @param filepath
      * @param options
      */
-    mkdir(filepath: string, options: FS.MKDirOptions | undefined): Promise<void>
+    mkdir(filepath: string, options: FS.MKDirOptions | undefined): Promise<never>
 
     /**
      * Remove directory
      * @param filepath
      * @param options
      */
-    rmdir(filepath: string, options: undefined): Promise<void>
+    rmdir(filepath: string, options: undefined): Promise<never>
 
     /**
      * Read directory
@@ -31,7 +31,7 @@ declare module '@isomorphic-git/lightning-fs' {
      */
     readdir(filepath: string, options: undefined): Promise<string[]>
 
-    writeFile(filepath: string, data: Uint8Array | string, options: FS.WriteFileOptions | undefined | string): Promise<void>
+    writeFile(filepath: string, data: Uint8Array | string, options: FS.WriteFileOptions | undefined | string): Promise<never>
 
     readFile(filepath: string, options: FS.ReadFileOptions | undefined | string): Promise<Uint8Array>
 
@@ -40,14 +40,14 @@ declare module '@isomorphic-git/lightning-fs' {
      * @param filepath
      * @param options
      */
-    unlink(filepath: string, options: undefined): Promise<void>
+    unlink(filepath: string, options: undefined): Promise<never>
 
     /**
      * Rename a file or directory
      * @param oldFilepath
      * @param newFilepath
      */
-    rename(oldFilepath: string, newFilepath: string): Promise<void>
+    rename(oldFilepath: string, newFilepath: string): Promise<never>
 
     /**
      * The result is a Stat object similar to the one used by Node but with fewer and slightly different properties and methods.
@@ -68,7 +68,7 @@ declare module '@isomorphic-git/lightning-fs' {
      * @param target
      * @param filepath
      */
-    symlink(target: string, filepath: string): Promise<void>
+    symlink(target: string, filepath: string): Promise<never>
 
     /**
      * Read the target of a symlink.
@@ -83,7 +83,7 @@ declare module '@isomorphic-git/lightning-fs' {
      * @param filepath
      * @param options
      */
-    backFile(filepath: string, options: FS.BackFileOptions | undefined): Promise<void>
+    backFile(filepath: string, options: FS.BackFileOptions | undefined): Promise<never>
 
     /**
      * @param filepath
@@ -287,4 +287,16 @@ declare module '@isomorphic-git/lightning-fs' {
     }
   }
   export default FS
+}
+
+declare module '@isomorphic-git/lightning-fs/src/path' {
+  namespace Path {
+    function join(...parts: string[]): string
+    function normalize(path: string): string
+    function split(path: string): string[]
+    function basename(path: string): string
+    function dirname(path: string): string
+    function resolve(...paths: string[]): string
+  }
+  export default Path
 }
