@@ -12,14 +12,14 @@ declare module '@isomorphic-git/lightning-fs' {
      * @param filepath
      * @param options
      */
-    mkdir(filepath: string, options: FS.MKDirOptions | undefined): Promise<never>
+    mkdir(filepath: string, options: FS.MKDirOptions | undefined): Promise<void>
 
     /**
      * Remove directory
      * @param filepath
      * @param options
      */
-    rmdir(filepath: string, options: undefined): Promise<never>
+    rmdir(filepath: string, options: undefined): Promise<void>
 
     /**
      * Read directory
@@ -31,7 +31,7 @@ declare module '@isomorphic-git/lightning-fs' {
      */
     readdir(filepath: string, options: undefined): Promise<string[]>
 
-    writeFile(filepath: string, data: Uint8Array | string, options: FS.WriteFileOptions | undefined | string): Promise<never>
+    writeFile(filepath: string, data: Uint8Array | string, options: FS.WriteFileOptions | undefined | string): Promise<void>
 
     readFile(filepath: string, options: FS.ReadFileOptions | undefined | string): Promise<Uint8Array>
 
@@ -40,14 +40,14 @@ declare module '@isomorphic-git/lightning-fs' {
      * @param filepath
      * @param options
      */
-    unlink(filepath: string, options: undefined): Promise<never>
+    unlink(filepath: string, options: undefined): Promise<void>
 
     /**
      * Rename a file or directory
      * @param oldFilepath
      * @param newFilepath
      */
-    rename(oldFilepath: string, newFilepath: string): Promise<never>
+    rename(oldFilepath: string, newFilepath: string): Promise<void>
 
     /**
      * The result is a Stat object similar to the one used by Node but with fewer and slightly different properties and methods.
@@ -68,7 +68,7 @@ declare module '@isomorphic-git/lightning-fs' {
      * @param target
      * @param filepath
      */
-    symlink(target: string, filepath: string): Promise<never>
+    symlink(target: string, filepath: string): Promise<void>
 
     /**
      * Read the target of a symlink.
@@ -83,7 +83,7 @@ declare module '@isomorphic-git/lightning-fs' {
      * @param filepath
      * @param options
      */
-    backFile(filepath: string, options: FS.BackFileOptions | undefined): Promise<never>
+    backFile(filepath: string, options: FS.BackFileOptions | undefined): Promise<void>
 
     /**
      * @param filepath
