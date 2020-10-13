@@ -149,7 +149,7 @@ declare module '@isomorphic-git/lightning-fs' {
 
       writeFile(filepath: string, data: Uint8Array | string, options?: FS.WriteFileOptions | string): Promise<void>
 
-      readFile(filepath: string, options?: FS.ReadFileOptions | string): Promise<Uint8Array>
+      readFile(filepath: string, options?: FS.ReadFileOptions | string): Promise<Uint8Array | string>
 
       /**
        * Delete a file
