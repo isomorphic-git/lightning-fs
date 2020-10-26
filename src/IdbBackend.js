@@ -12,13 +12,13 @@ module.exports = class IdbBackend {
   loadSuperblock() {
     return idb.get("!root", this._store);
   }
-  readFile(inode) {
+  readFileInode(inode) {
     return idb.get(inode, this._store)
   }
-  writeFile(inode, data) {
+  writeFileInode(inode, data) {
     return idb.set(inode, data, this._store)
   }
-  unlink(inode) {
+  unlinkInode(inode) {
     return idb.del(inode, this._store)
   }
   wipe() {

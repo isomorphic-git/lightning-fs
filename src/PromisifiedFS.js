@@ -6,6 +6,7 @@ const CacheFS = require("./CacheFS.js");
 const { ENOENT, ENOTEMPTY, ETIMEDOUT } = require("./errors.js");
 const IdbBackend = require("./IdbBackend.js");
 const HttpBackend = require("./HttpBackend.js")
+const YjsBackend = require("./YjsBackend.js")
 const Mutex = require("./Mutex.js");
 const Mutex2 = require("./Mutex2.js");
 
@@ -65,7 +66,6 @@ module.exports = class PromisifiedFS {
     }
   }
   async init (...args) {
-    if (this._initPromiseResolve) await this._initPromise;
     this._initPromise = this._init(...args)
     return this._initPromise
   }
@@ -78,9 +78,16 @@ module.exports = class PromisifiedFS {
     lockDbName = name + "_lock",
     lockStoreName = name + "_lock",
     defer = false,
+    yfs = false,
   } = {}) {
     await this._gracefulShutdown()
     this._name = name
+    if (yfs) {
+      this._yfs = new YjsBackend(this._name);
+      this._cache = this._yfs;
+      this._idb = this._yfs;
+      return this._yfs._ready;
+    }
     this._idb = new IdbBackend(fileDbName, fileStoreName);
     this._mutex = navigator.locks ? new Mutex2(name) : new Mutex(lockDbName, lockStoreName);
     this._cache = new CacheFS(name);
@@ -89,10 +96,6 @@ module.exports = class PromisifiedFS {
     if (url) {
       this._http = new HttpBackend(url)
       this._urlauto = !!urlauto
-    }
-    if (this._initPromiseResolve) {
-      this._initPromiseResolve();
-      this._initPromiseResolve = null;
     }
     // The next comment starting with the "fs is initially activated when constructed"?
     // That can create contention for the mutex if two threads try to init at the same time
@@ -135,6 +138,9 @@ module.exports = class PromisifiedFS {
   async _activate() {
     if (!this._initPromise) console.warn(new Error(`Attempted to use LightningFS ${this._name} before it was initialized.`))
     await this._initPromise
+
+    if (this._yfs) return
+
     if (this._deactivationTimeout) {
       clearTimeout(this._deactivationTimeout)
       this._deactivationTimeout = null
@@ -215,7 +221,7 @@ module.exports = class PromisifiedFS {
     let data = null, stat = null
     try {
       stat = this._cache.stat(filepath);
-      data = await this._idb.readFile(stat.ino)
+      data = await this._idb.readFileInode(stat.ino)
     } catch (e) {
       if (!this._urlauto) throw e
     }
@@ -249,7 +255,7 @@ module.exports = class PromisifiedFS {
       data = encode(data);
     }
     const stat = await this._cache.writeStat(filepath, data.byteLength, { mode });
-    await this._idb.writeFile(stat.ino, data)
+    await this._idb.writeFileInode(stat.ino, data)
     return null
   }
   async unlink(filepath, opts) {
@@ -257,7 +263,7 @@ module.exports = class PromisifiedFS {
     const stat = this._cache.lstat(filepath);
     this._cache.unlink(filepath);
     if (stat.type !== 'symlink') {
-      await this._idb.unlink(stat.ino)
+      await this._idb.unlinkInode(stat.ino)
     }
     return null
   }
