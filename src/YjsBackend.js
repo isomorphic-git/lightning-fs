@@ -1,12 +1,17 @@
 const Y = require('yjs');
 const { IndexeddbPersistence } = require('y-indexeddb');
 // const { WebsocketProvider } = require('y-websocket');
+const { v4: uuidv4 } = require('uuid');
 
 const path = require("./path.js");
 const { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY } = require("./errors.js");
 
-const STAT = '!STAT';
-const DATA = '!DATA';
+// ':' is invalid as a filename character on both Mac and Windows, so these shouldn't conflict with real filenames.
+// I can still totally see our own code failing to reject ':' when renaming a file though.
+// So for safety, I'm adding NULL because NULL is invalid as a filename character on Linux. And pretty impossible to type using a keyboard.
+// So that should handle ANY conceivable craziness.
+const STAT = ':S\0';
+const DATA = ':D\0';
 
 module.exports = class YjsBackend {
   constructor(name) {
@@ -19,9 +24,10 @@ module.exports = class YjsBackend {
       this._inodes = this._ydoc.getMap('!inodes');
       if (!this._root.has("/")) {
         const root = new Y.Map();
-        root.set(STAT, { mode: 0o777, type: "dir", size: 0, ino: 0, mtimeMs: Date.now() });
-        this._inodes.set('0', root);
-        this._root.set("/", '0');
+        const ino = uuidv4();
+        root.set(STAT, { mode: 0o777, type: "dir", size: 0, ino, mtimeMs: Date.now() });
+        this._inodes.set(ino, root);
+        this._root.set("/", ino);
       }
       // this._yws.connectBc();
       return 'ready';
@@ -30,21 +36,6 @@ module.exports = class YjsBackend {
   get activated () {
     return !!this._root
   }
-  autoinc () {
-    let val = this._maxInode(this._inodes.get("0")) + 1;
-    return val;
-  }
-  _maxInode(map) {
-    let max = map.get(STAT).ino;
-    for (let [key, ino] of map) {
-      if (key === STAT) continue;
-      if (key === DATA) continue;
-      const val = this._inodes.get(String(ino));
-      if (!val.get) continue;
-      max = Math.max(max, this._maxInode(val));
-    }
-    return max;
-  }
   _lookup(filepath, follow = true) {
     let dir = this._root;
     let partialPath = '/'
@@ -52,7 +43,7 @@ module.exports = class YjsBackend {
     for (let i = 0; i < parts.length; ++ i) {
       let part = parts[i];
       const ino = dir.get(part);
-      dir = this._inodes.get(String(ino));
+      dir = this._inodes.get(ino);
       if (!dir) throw new ENOENT(filepath);
       // Follow symlinks
       if (follow || i < parts.length - 1) {
@@ -77,7 +68,7 @@ module.exports = class YjsBackend {
     if (dir.has(basename)) {
       throw new EEXIST();
     }
-    const ino = this.autoinc();
+    const ino = uuidv4();
     let entry = new Y.Map()
     let stat = {
       mode,
@@ -87,7 +78,7 @@ module.exports = class YjsBackend {
       ino,
     };
     entry.set(STAT, stat);
-    this._inodes.set(String(ino), entry);
+    this._inodes.set(ino, entry);
     dir.set(basename, ino);
   }
   rmdir(filepath) {
@@ -120,7 +111,7 @@ module.exports = class YjsBackend {
       mode = 0o666;
     }
     if (ino == null) {
-      ino = this.autoinc();
+      ino = uuidv4();
     }
     let dir = this._lookup(path.dirname(filepath));
     let basename = path.basename(filepath);
@@ -134,7 +125,7 @@ module.exports = class YjsBackend {
     let entry = new Y.Map();
     entry.set(STAT, stat);
     dir.set(basename, ino);
-    this._inodes.set(String(ino), entry);
+    this._inodes.set(ino, entry);
     return stat;
   }
   unlink(filepath) {
@@ -179,7 +170,7 @@ module.exports = class YjsBackend {
       mode = 0o120000;
     }
     if (ino == null) {
-      ino = this.autoinc();
+      ino = uuidv4();
     }
     let dir = this._lookup(path.dirname(filepath));
     let basename = path.basename(filepath);
@@ -194,7 +185,7 @@ module.exports = class YjsBackend {
     let entry = new Y.Map();
     entry.set(STAT, stat);
     dir.set(basename, ino);
-    this._inodes.set(String(ino), entry);
+    this._inodes.set(ino, entry);
     return stat;
   }
   _du (dir) {
@@ -203,7 +194,7 @@ module.exports = class YjsBackend {
       if (name === STAT) {
         size += ino.size;
       } else if (name !== DATA) {
-        const entry = this._inodes.get(String(ino));
+        const entry = this._inodes.get(ino);
         size += this._du(entry);
       }
     }
@@ -221,10 +212,10 @@ module.exports = class YjsBackend {
     return
   }
   readFileInode(inode) {
-    return this._inodes.get(String(inode)).get(DATA);
+    return this._inodes.get(inode).get(DATA);
   }
   writeFileInode(inode, data) {
-    return this._inodes.get(String(inode)).set(DATA, data);
+    return this._inodes.get(inode).set(DATA, data);
   }
   unlinkInode(inode) {
     return this._inodes.delete(inode)
