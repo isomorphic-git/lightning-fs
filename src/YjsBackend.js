@@ -11,7 +11,6 @@ const { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY } = require("./errors.js");
 // So for safety, I'm adding NULL because NULL is invalid as a filename character on Linux. And pretty impossible to type using a keyboard.
 // So that should handle ANY conceivable craziness.
 const STAT = ':S\0';
-const DATA = ':D\0';
 
 module.exports = class YjsBackend {
   constructor(name) {
@@ -22,6 +21,7 @@ module.exports = class YjsBackend {
     this._ready = this._yidb.whenSynced.then(async () => {
       this._root = this._ydoc.getMap('!root');
       this._inodes = this._ydoc.getMap('!inodes');
+      this._content = this._ydoc.getMap('!content');
       if (!this._root.has("/")) {
         const root = new Y.Map();
         const ino = uuidv4();
@@ -193,7 +193,7 @@ module.exports = class YjsBackend {
     for (const [name, ino] of dir.entries()) {
       if (name === STAT) {
         size += ino.size;
-      } else if (name !== DATA) {
+      } else {
         const entry = this._inodes.get(ino);
         size += this._du(entry);
       }
@@ -212,13 +212,13 @@ module.exports = class YjsBackend {
     return
   }
   readFileInode(inode) {
-    return this._inodes.get(inode).get(DATA);
+    return this._content.get(inode);
   }
   writeFileInode(inode, data) {
-    return this._inodes.get(inode).set(DATA, data);
+    return this._content.set(inode, data);
   }
   unlinkInode(inode) {
-    return this._inodes.delete(inode)
+    return this._content.delete(inode)
   }
   wipe() {
     return [...this._root.keys()].map(key => this._root.delete(key))
