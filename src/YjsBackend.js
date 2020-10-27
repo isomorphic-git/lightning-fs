@@ -215,6 +215,14 @@ module.exports = class YjsBackend {
     return this._content.get(inode);
   }
   writeFileInode(inode, data) {
+    if (typeof data === 'string') {
+      // TODO: Convert to Y.Text
+    } else {
+      // Yjs will fail if data.constructor !== Uint8Array
+      if (data.constructor.name === 'Buffer') {
+        data = new Uint8Array(data.buffer);
+      }
+    }
     return this._content.set(inode, data);
   }
   unlinkInode(inode) {
