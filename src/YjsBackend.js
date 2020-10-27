@@ -1,6 +1,6 @@
 const Y = require('yjs');
 const { IndexeddbPersistence } = require('y-indexeddb');
-// const { WebsocketProvider } = require('y-websocket');
+const { WebsocketProvider } = require('y-websocket');
 const { v4: uuidv4 } = require('uuid');
 
 const path = require("./path.js");
@@ -17,7 +17,7 @@ module.exports = class YjsBackend {
     this._ydoc = new Y.Doc();
     this._yidb = new IndexeddbPersistence(name + '_yjs', this._ydoc);
     // WIP: I'm adding this to get the BroadcastChannel functionality for the threadsafety tests can run.
-    // this._yws = new WebsocketProvider('wss://demos.yjs.dev', name + '_yjs', this._ydoc, { connect: false });
+    this._yws = new WebsocketProvider('wss://demos.yjs.dev', 'stoplight-v0.0.1-' + name + '_yjs', this._ydoc, { connect: false });
     this._ready = this._yidb.whenSynced.then(async () => {
       this._root = this._ydoc.getMap('!root');
       this._inodes = this._ydoc.getMap('!inodes');
@@ -29,7 +29,7 @@ module.exports = class YjsBackend {
         this._inodes.set(ino, root);
         this._root.set("/", ino);
       }
-      // this._yws.connectBc();
+      this._yws.connectBc();
       return 'ready';
     });
   }
