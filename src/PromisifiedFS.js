@@ -186,6 +186,7 @@ module.exports = class PromisifiedFS {
     return this._deactivationPromise
   }
   async __deactivate() {
+    if (this._yfs) return;
     if (await this._mutex.has()) {
       await this._saveSuperblock()
     }
