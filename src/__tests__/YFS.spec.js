@@ -246,7 +246,7 @@ describe("YFS module", () => {
     });
   });
 
-  xdescribe("rename", () => {
+  describe("rename", () => {
     it("create and rename file", done => {
       fs.mkdir("/rename").finally(() => {
         fs.writeFile("/rename/a.txt", "").then(() => {
@@ -309,14 +309,14 @@ describe("YFS module", () => {
         });
       });
     });
-    xit("symlink a file and read/write to it (relative)", done => {
-      fs.mkdir("/symlink").finally(() => {
-        fs.writeFile("/symlink/a.txt", "hello").then(() => {
-          fs.symlink("a.txt", "/symlink/b.txt").then(() => {
-            fs.readFile("/symlink/b.txt", "utf8").then(data => {
+    it("symlink a file and read/write to it (relative)", done => {
+      fs.mkdir("/symlink-relative").finally(() => {
+        fs.writeFile("/symlink-relative/a.txt", "hello").then(() => {
+          fs.symlink("a.txt", "/symlink-relative/b.txt").then(() => {
+            fs.readFile("/symlink-relative/b.txt", "utf8").then(data => {
               expect(data).toBe("hello")
-              fs.writeFile("/symlink/b.txt", "world").then(() => {
-                fs.readFile("/symlink/a.txt", "utf8").then(data => {
+              fs.writeFile("/symlink-relative/b.txt", "world").then(() => {
+                fs.readFile("/symlink-relative/a.txt", "utf8").then(data => {
                   expect(data).toBe("world");
                   done();
                 })
@@ -327,16 +327,16 @@ describe("YFS module", () => {
       });
     });
     it("symlink a directory and read/write to it", done => {
-      fs.mkdir("/symlink").finally(() => {
-        fs.mkdir("/symlink/a").finally(() => {
-          fs.writeFile("/symlink/a/file.txt", "data").then(() => {
-            fs.symlink("/symlink/a", "/symlink/b").then(() => {
-              fs.readdir("/symlink/b").then(data => {
+      fs.mkdir("/symlink-dir").finally(() => {
+        fs.mkdir("/symlink-dir/a").finally(() => {
+          fs.writeFile("/symlink-dir/a/file.txt", "data").then(() => {
+            fs.symlink("/symlink-dir/a", "/symlink-dir/b").then(() => {
+              fs.readdir("/symlink-dir/b").then(data => {
                 expect(data.includes("file.txt")).toBe(true);
-                fs.readFile("/symlink/b/file.txt", "utf8").then(data => {
+                fs.readFile("/symlink-dir/b/file.txt", "utf8").then(data => {
                   expect(data).toBe("data")
-                  fs.writeFile("/symlink/b/file2.txt", "world").then(() => {
-                    fs.readFile("/symlink/a/file2.txt", "utf8").then(data => {
+                  fs.writeFile("/symlink-dir/b/file2.txt", "world").then(() => {
+                    fs.readFile("/symlink-dir/a/file2.txt", "utf8").then(data => {
                       expect(data).toBe("world");
                       done();
                     })
@@ -349,17 +349,17 @@ describe("YFS module", () => {
       });
     });
     it("symlink a directory and read/write to it (relative)", done => {
-      fs.mkdir("/symlink").finally(() => {
-        fs.mkdir("/symlink/a").finally(() => {
-          fs.mkdir("/symlink/b").finally(() => {
-            fs.writeFile("/symlink/a/file.txt", "data").then(() => {
-              fs.symlink("../a", "/symlink/b/c").then(() => {
-                fs.readdir("/symlink/b/c").then(data => {
+      fs.mkdir("/symlink-dir-relative").finally(() => {
+        fs.mkdir("/symlink-dir-relative/a").finally(() => {
+          fs.mkdir("/symlink-dir-relative/b").finally(() => {
+            fs.writeFile("/symlink-dir-relative/a/file.txt", "data").then(() => {
+              fs.symlink("../a", "/symlink-dir-relative/b/c").then(() => {
+                fs.readdir("/symlink-dir-relative/b/c").then(data => {
                   expect(data.includes("file.txt")).toBe(true);
-                  fs.readFile("/symlink/b/c/file.txt", "utf8").then(data => {
+                  fs.readFile("/symlink-dir-relative/b/c/file.txt", "utf8").then(data => {
                     expect(data).toBe("data")
-                    fs.writeFile("/symlink/b/c/file2.txt", "world").then(() => {
-                      fs.readFile("/symlink/a/file2.txt", "utf8").then(data => {
+                    fs.writeFile("/symlink-dir-relative/b/c/file2.txt", "world").then(() => {
+                      fs.readFile("/symlink-dir-relative/a/file2.txt", "utf8").then(data => {
                         expect(data).toBe("world");
                         done();
                       })
@@ -446,7 +446,7 @@ describe("YFS module", () => {
     });
   });
 
-  xdescribe("du", () => {
+  describe("du", () => {
     it("du returns the total file size of a path", done => {
       fs.mkdir("/du").finally(() => {
         fs.writeFile("/du/a.txt", "hello").then(() => {

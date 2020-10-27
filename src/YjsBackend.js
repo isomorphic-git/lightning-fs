@@ -1,5 +1,6 @@
 const Y = require('yjs');
 const { IndexeddbPersistence } = require('y-indexeddb');
+// const { WebsocketProvider } = require('y-websocket');
 
 const path = require("./path.js");
 const { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY } = require("./errors.js");
@@ -11,6 +12,8 @@ module.exports = class YjsBackend {
   constructor(name) {
     this._ydoc = new Y.Doc();
     this._yidb = new IndexeddbPersistence(name + '_yjs', this._ydoc);
+    // WIP: I'm adding this to get the BroadcastChannel functionality for the threadsafety tests can run.
+    // this._yws = new WebsocketProvider('wss://demos.yjs.dev', name + '_yjs', this._ydoc, { connect: false });
     this._ready = this._yidb.whenSynced.then(async () => {
       this._root = this._ydoc.getMap('!root');
       this._inodes = this._ydoc.getMap('!inodes');
@@ -20,6 +23,7 @@ module.exports = class YjsBackend {
         this._inodes.set('0', root);
         this._root.set("/", '0');
       }
+      // this._yws.connectBc();
       return 'ready';
     });
   }
@@ -140,17 +144,18 @@ module.exports = class YjsBackend {
     parent.delete(basename);
   }
   rename(oldFilepath, newFilepath) {
-    let basename = path.basename(newFilepath);
+    let oldBasename = path.basename(oldFilepath);
+    let newBasename = path.basename(newFilepath);
     // Note: do both lookups before making any changes
     // so if lookup throws, we don't lose data (issue #23)
     // grab references
-    let entry = this._lookup(oldFilepath);
+    let entry = this._lookup(path.dirname(oldFilepath));
     let destDir = this._lookup(path.dirname(newFilepath));
-    // remove from old parent directory
-    this.unlink(oldFilepath)
+    let ino = entry.get(oldBasename);
     // insert into new parent directory
-    // TODO: THIS DOESN'T WORK IN YJS (must use New fresh Y.Map object?)
-    destDir.set(basename, entry);
+    destDir.set(newBasename, ino)
+    // remove from old parent directory
+    entry.delete(oldBasename)
   }
   stat(filepath) {
     return this._lookup(filepath).get(STAT);
@@ -195,10 +200,10 @@ module.exports = class YjsBackend {
   _du (dir) {
     let size = 0;
     for (const [name, ino] of dir.entries()) {
-      const entry = this._inodes.get(String(ino));
       if (name === STAT) {
-        size += entry.size;
-      } else {
+        size += ino.size;
+      } else if (name !== DATA) {
+        const entry = this._inodes.get(String(ino));
         size += this._du(entry);
       }
     }
