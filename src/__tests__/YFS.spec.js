@@ -165,7 +165,7 @@ describe("YFS module", () => {
     });
   });
 
-  fdescribe("rmdir", () => {
+  describe("rmdir", () => {
     it("delete root directory fails", done => {
       fs.rmdir("/").catch(err => {
         expect(err).not.toBe(null);
