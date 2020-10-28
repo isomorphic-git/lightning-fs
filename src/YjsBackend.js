@@ -2,7 +2,7 @@ const { encode, decode } = require("isomorphic-textencoder");
 const Y = require('yjs');
 const { IndexeddbPersistence } = require('y-indexeddb');
 const { WebsocketProvider } = require('y-websocket');
-const { v4: uuidv4 } = require('uuid');
+const { nanoid } = require('nanoid');
 const diff = require('fast-diff')
 
 const path = require("./path.js");
@@ -12,7 +12,8 @@ const { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY } = require("./errors.js");
 // I can still totally see our own code failing to reject ':' when renaming a file though.
 // So for safety, I'm adding NULL because NULL is invalid as a filename character on Linux. And pretty impossible to type using a keyboard.
 // So that should handle ANY conceivable craziness.
-const STAT = ':S\0';
+const STAT = 's';
+const CHILDREN = 'c';
 
 module.exports = class YjsBackend {
   constructor(name) {
@@ -24,12 +25,15 @@ module.exports = class YjsBackend {
       this._root = this._ydoc.getMap('!root');
       this._inodes = this._ydoc.getMap('!inodes');
       this._content = this._ydoc.getMap('!content');
-      if (!this._root.has("/")) {
-        const root = new Y.Map();
-        const ino = uuidv4();
-        root.set(STAT, { mode: 0o777, type: "dir", size: 0, ino, mtimeMs: Date.now(), filepath: '/' });
-        this._inodes.set(ino, root);
-        this._root.set("/", ino);
+      if (!this._root.has(CHILDREN)) {
+        const rootdir = new Y.Map();
+        const ino = nanoid();
+        rootdir.set(STAT, { mode: 0o777, type: "dir", size: 0, ino, mtimeMs: Date.now(), filepath: '/' });
+        rootdir.set(CHILDREN, new Y.Map());
+        this._inodes.set(ino, rootdir);
+
+        this._root.set(CHILDREN, new Y.Map());
+        this._root.get(CHILDREN).set('/', ino);
       }
       this._yws.connectBc();
       return 'ready';
@@ -44,7 +48,7 @@ module.exports = class YjsBackend {
     let parts = path.split(filepath)
     for (let i = 0; i < parts.length; ++ i) {
       let part = parts[i];
-      const ino = dir.get(part);
+      const ino = dir.get(CHILDREN).get(part);
       dir = this._inodes.get(ino);
       if (!dir) throw new ENOENT(filepath);
       // Follow symlinks
@@ -67,10 +71,10 @@ module.exports = class YjsBackend {
     if (filepath === "/") throw new EEXIST();
     let dir = this._lookup(path.dirname(filepath));
     let basename = path.basename(filepath);
-    if (dir.has(basename)) {
+    if (dir.get(CHILDREN).has(basename)) {
       throw new EEXIST();
     }
-    const ino = uuidv4();
+    const ino = nanoid();
     let stat = {
       mode,
       type: "dir",
@@ -82,28 +86,29 @@ module.exports = class YjsBackend {
     this._ydoc.transact(() => {
       let entry = new Y.Map()
       entry.set(STAT, stat);
+      entry.set(CHILDREN, new Y.Map());
       this._inodes.set(ino, entry);
-      dir.set(basename, ino);
+      dir.get(CHILDREN).set(basename, ino);
     }, 'mkdir');
   }
   rmdir(filepath) {
     let dir = this._lookup(filepath);
     if (dir.get(STAT).type !== 'dir') throw new ENOTDIR();
-    // check it's empty (size should be 1 for just StatSym)
-    if (dir.size > 1) throw new ENOTEMPTY();
+    // check it's empty
+    if (dir.get(CHILDREN).size > 0) throw new ENOTEMPTY();
     // remove from parent
     let parent = this._lookup(path.dirname(filepath));
     let basename = path.basename(filepath);
-    const ino = parent.get(basename)
+    const ino = parent.get(CHILDREN).get(basename)
     this._ydoc.transact(() => {
-      parent.delete(basename);
+      parent.get(CHILDREN).delete(basename);
       this._inodes.delete(ino);
     }, 'rmdir');
   }
   readdir(filepath) {
     let dir = this._lookup(filepath);
     if (dir.get(STAT).type !== 'dir') throw new ENOTDIR();
-    return [...dir.keys()].filter(key => key != STAT);
+    return [...dir.get(CHILDREN).keys()].filter(key => key != STAT);
   }
   writeStat(filepath, size, { mode }) {
     let ino;
@@ -118,7 +123,7 @@ module.exports = class YjsBackend {
       mode = 0o666;
     }
     if (ino == null) {
-      ino = uuidv4();
+      ino = nanoid();
     }
     let dir = this._lookup(path.dirname(filepath));
     let basename = path.basename(filepath);
@@ -134,7 +139,7 @@ module.exports = class YjsBackend {
       let entry = new Y.Map();
       entry.set(STAT, stat);
       this._inodes.set(ino, entry);
-      dir.set(basename, ino);
+      dir.get(CHILDREN).set(basename, ino);
     }, 'writeFile');
     return stat;
   }
@@ -143,7 +148,7 @@ module.exports = class YjsBackend {
     let parent = this._lookup(path.dirname(filepath));
     let basename = path.basename(filepath);
     this._ydoc.transact(() => {
-      parent.delete(basename);
+      parent.get(CHILDREN).delete(basename);
     }, 'unlink');
   }
   rename(oldFilepath, newFilepath) {
@@ -154,14 +159,14 @@ module.exports = class YjsBackend {
     // grab references
     let srcDir = this._lookup(path.dirname(oldFilepath));
     let destDir = this._lookup(path.dirname(newFilepath));
-    let ino = srcDir.get(oldBasename);
+    let ino = srcDir.get(CHILDREN).get(oldBasename);
     const entry = this._inodes.get(ino);
     const stat = entry.get(STAT);
     this._ydoc.transact(() => {
       // insert into new parent directory
-      destDir.set(newBasename, ino)
+      destDir.get(CHILDREN).set(newBasename, ino)
       // remove from old parent directory
-      srcDir.delete(oldBasename)
+      srcDir.get(CHILDREN).delete(oldBasename)
       // update stat.path
       stat.filepath = newFilepath;
       entry.set(STAT, stat);
@@ -189,7 +194,7 @@ module.exports = class YjsBackend {
       mode = 0o120000;
     }
     if (ino == null) {
-      ino = uuidv4();
+      ino = nanoid();
     }
     let dir = this._lookup(path.dirname(filepath));
     let basename = path.basename(filepath);
@@ -205,16 +210,17 @@ module.exports = class YjsBackend {
       let entry = new Y.Map();
       entry.set(STAT, stat);
       this._inodes.set(ino, entry);
-      dir.set(basename, ino);
+      dir.get(CHILDREN).set(basename, ino);
     }, 'symlink');
     return stat;
   }
   _du (dir) {
     let size = 0;
-    for (const [name, ino] of dir.entries()) {
-      if (name === STAT) {
-        size += ino.size;
-      } else {
+    const stat = dir.get(STAT)
+    if (stat.type === 'file') {
+      size += stat.size;
+    } else if (stat.type === 'dir') {
+      for (const [name, ino] of dir.get(CHILDREN).entries()) {
         const entry = this._inodes.get(ino);
         size += this._du(entry);
       }
@@ -246,7 +252,6 @@ module.exports = class YjsBackend {
       if (oldData && oldData instanceof Y.Text) {
         const oldString = oldData.toString();
         const changes = diff(oldString, rawdata);
-        console.log('changes', changes);
         let idx = 0;
         for (const [kind, string] of changes) {
           switch (kind) {
