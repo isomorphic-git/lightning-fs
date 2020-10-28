@@ -25,7 +25,7 @@ module.exports = class YjsBackend {
       if (!this._root.has("/")) {
         const root = new Y.Map();
         const ino = uuidv4();
-        root.set(STAT, { mode: 0o777, type: "dir", size: 0, ino, mtimeMs: Date.now() });
+        root.set(STAT, { mode: 0o777, type: "dir", size: 0, ino, mtimeMs: Date.now(), filepath: '/' });
         this._inodes.set(ino, root);
         this._root.set("/", ino);
       }
@@ -76,6 +76,7 @@ module.exports = class YjsBackend {
       size: 0,
       mtimeMs: Date.now(),
       ino,
+      filepath,
     };
     entry.set(STAT, stat);
     this._inodes.set(ino, entry);
@@ -121,6 +122,7 @@ module.exports = class YjsBackend {
       size,
       mtimeMs: Date.now(),
       ino,
+      filepath,
     };
     let entry = new Y.Map();
     entry.set(STAT, stat);
@@ -140,13 +142,18 @@ module.exports = class YjsBackend {
     // Note: do both lookups before making any changes
     // so if lookup throws, we don't lose data (issue #23)
     // grab references
-    let entry = this._lookup(path.dirname(oldFilepath));
+    let srcDir = this._lookup(path.dirname(oldFilepath));
     let destDir = this._lookup(path.dirname(newFilepath));
-    let ino = entry.get(oldBasename);
+    let ino = srcDir.get(oldBasename);
     // insert into new parent directory
     destDir.set(newBasename, ino)
     // remove from old parent directory
-    entry.delete(oldBasename)
+    srcDir.delete(oldBasename)
+    // update stat.path
+    const entry = this._inodes.get(ino);
+    const stat = entry.get(STAT);
+    stat.filepath = newFilepath;
+    entry.set(STAT, stat);
   }
   stat(filepath) {
     return this._lookup(filepath).get(STAT);
