@@ -14,6 +14,8 @@ const { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY } = require("./errors.js");
 // So that should handle ANY conceivable craziness.
 const STAT = 's';
 const CHILDREN = 'c';
+const PARENT = 'p';
+const BASENAME = 'b';
 
 module.exports = class YjsBackend {
   constructor(name) {
@@ -22,19 +24,22 @@ module.exports = class YjsBackend {
     // WIP: I'm adding this to get the BroadcastChannel functionality for the threadsafety tests can run.
     this._yws = new WebsocketProvider('wss://demos.yjs.dev', 'stoplight-v0.0.1-' + name + '_yjs', this._ydoc, { connect: false });
     this._ready = this._yidb.whenSynced.then(async () => {
-      this._root = this._ydoc.getMap('!root');
       this._inodes = this._ydoc.getMap('!inodes');
       this._content = this._ydoc.getMap('!content');
-      if (!this._root.has(CHILDREN)) {
+      this._ino2path = {};
+      this._path2ino = {};
+      if (this._inodes.size === 0) {
         const rootdir = new Y.Map();
         const ino = nanoid();
-        rootdir.set(STAT, { mode: 0o777, type: "dir", size: 0, ino, mtimeMs: Date.now(), filepath: '/' });
-        rootdir.set(CHILDREN, new Y.Map());
+        rootdir.set(STAT, { mode: 0o777, type: "dir", size: 0, ino, mtimeMs: Date.now() });
+        rootdir.set(PARENT, null);
+        rootdir.set(BASENAME, '/');
         this._inodes.set(ino, rootdir);
-
-        this._root.set(CHILDREN, new Y.Map());
-        this._root.get(CHILDREN).set('/', ino);
       }
+      for (const ino of this._inodes.keys()) {
+        this._computePath(ino);
+      }
+      console.log(JSON.stringify(this._ino2path, null, 2))
       this._yws.connectBc();
       return 'ready';
     });
@@ -42,14 +47,43 @@ module.exports = class YjsBackend {
   get activated () {
     return !!this._root
   }
+  _computePath(ino) {
+    let parts = [];
+    while (ino != null) {
+      const dir = this._inodes.get(ino)
+      if (!dir) break;
+      parts.unshift(dir.get(BASENAME))
+      ino = dir.get(PARENT)
+    }
+    const filepath = path.join(parts);
+    this._ino2path[ino] = filepath;
+    this._path2ino[filepath] = ino;
+    return filepath;
+  }
+  _childrenOf(id) {
+    const children = [];
+    for (const value of this._inodes.values()) {
+      if (value.get(PARENT) === id) children.push(value);
+    }
+    return children;
+  }
+  _findChild(id, basename) {
+    const children = [];
+    for (const value of this._inodes.values()) {
+      if (value.get(PARENT) === id && value.get(BASENAME) === basename) return value;
+    }
+    return;
+  }
   _lookup(filepath, follow = true) {
-    let dir = this._root;
+    let dir = null;
     let partialPath = '/'
     let parts = path.split(filepath)
+    // TODO: Actually, given we can reconstruct paths from the bottom up,
+    // it might be faster to search by matching against the basepath and then
+    // narrowing that set. The problem would be dealing with symlinks.
     for (let i = 0; i < parts.length; ++ i) {
       let part = parts[i];
-      const ino = dir.get(CHILDREN).get(part);
-      dir = this._inodes.get(ino);
+      dir = this._findChild(dir && dir.get(STAT).ino, part);
       if (!dir) throw new ENOENT(filepath);
       // Follow symlinks
       if (follow || i < parts.length - 1) {
@@ -70,9 +104,13 @@ module.exports = class YjsBackend {
   mkdir(filepath, { mode }) {
     if (filepath === "/") throw new EEXIST();
     let dir = this._lookup(path.dirname(filepath));
+    console.log('dir', JSON.stringify(dir.toJSON()));
+    console.log('ino', dir.get(STAT).ino);
     let basename = path.basename(filepath);
-    if (dir.get(CHILDREN).has(basename)) {
-      throw new EEXIST();
+    for (const child of this._childrenOf(dir.get(STAT).ino)) {
+      if (child.get(BASENAME) === basename) {
+        throw new EEXIST();
+      }
     }
     const ino = nanoid();
     let stat = {
@@ -81,34 +119,36 @@ module.exports = class YjsBackend {
       size: 0,
       mtimeMs: Date.now(),
       ino,
-      filepath,
     };
     this._ydoc.transact(() => {
       let entry = new Y.Map()
       entry.set(STAT, stat);
-      entry.set(CHILDREN, new Y.Map());
+      entry.set(PARENT, dir.get(STAT).ino);
+      entry.set(BASENAME, basename);
       this._inodes.set(ino, entry);
-      dir.get(CHILDREN).set(basename, ino);
     }, 'mkdir');
+    console.log(JSON.stringify(this._inodes.toJSON(), null, 2));
   }
   rmdir(filepath) {
     let dir = this._lookup(filepath);
+    console.log('dir', dir.toJSON());
     if (dir.get(STAT).type !== 'dir') throw new ENOTDIR();
+    const ino = dir.get(STAT).ino;
     // check it's empty
-    if (dir.get(CHILDREN).size > 0) throw new ENOTEMPTY();
-    // remove from parent
-    let parent = this._lookup(path.dirname(filepath));
-    let basename = path.basename(filepath);
-    const ino = parent.get(CHILDREN).get(basename)
+    if (this._childrenOf(ino).length > 0) throw new ENOTEMPTY();
+    console.log('its empty');
+    // remove from cache
+    delete this._ino2path[ino];
+    delete this._path2ino[filepath];
+    // delete inode
     this._ydoc.transact(() => {
-      parent.get(CHILDREN).delete(basename);
       this._inodes.delete(ino);
     }, 'rmdir');
   }
   readdir(filepath) {
     let dir = this._lookup(filepath);
     if (dir.get(STAT).type !== 'dir') throw new ENOTDIR();
-    return [...dir.get(CHILDREN).keys()].filter(key => key != STAT);
+    return this._childrenOf(dir.get(STAT).ino).map(node => node.get(BASENAME));
   }
   writeStat(filepath, size, { mode }) {
     let ino;
@@ -126,6 +166,7 @@ module.exports = class YjsBackend {
       ino = nanoid();
     }
     let dir = this._lookup(path.dirname(filepath));
+    let parentId = dir.get(STAT).ino;
     let basename = path.basename(filepath);
     let stat = {
       mode,
@@ -136,19 +177,29 @@ module.exports = class YjsBackend {
       filepath,
     };
     this._ydoc.transact(() => {
-      let entry = new Y.Map();
-      entry.set(STAT, stat);
-      this._inodes.set(ino, entry);
-      dir.get(CHILDREN).set(basename, ino);
+      let entry = this._inodes.get(ino);
+      if (!entry) {
+        entry = new Y.Map();
+        entry.set(STAT, stat);
+        entry.set(PARENT, parentId);
+        entry.set(BASENAME, basename);
+        this._inodes.set(ino, entry);
+        this._computePath(ino);
+      } else {
+        entry.set(STAT, stat);
+      }
     }, 'writeFile');
     return stat;
   }
   unlink(filepath) {
-    // remove from parent
-    let parent = this._lookup(path.dirname(filepath));
-    let basename = path.basename(filepath);
+    let node = this._lookup(filepath);
+    // remove from cache
+    delete this._ino2path[ino];
+    delete this._path2ino[filepath];
+    // delete inode
+    const ino = node.get(STAT).ino;
     this._ydoc.transact(() => {
-      parent.get(CHILDREN).delete(basename);
+      this._inodes.delete(ino);
     }, 'unlink');
   }
   rename(oldFilepath, newFilepath) {

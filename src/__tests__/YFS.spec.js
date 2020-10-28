@@ -165,7 +165,7 @@ describe("YFS module", () => {
     });
   });
 
-  describe("rmdir", () => {
+  fdescribe("rmdir", () => {
     it("delete root directory fails", done => {
       fs.rmdir("/").catch(err => {
         expect(err).not.toBe(null);
@@ -199,10 +199,12 @@ describe("YFS module", () => {
         fs.mkdir("/rmdir/empty").finally(() => {
           fs.readdir("/rmdir").then(data => {
             let originalSize = data.length;
+            console.log('data', data);
             fs.rmdir("/rmdir/empty").then(() => {
               fs.readdir("/rmdir").then(data => {
-                expect(data.length === originalSize - 1);
+                console.log('data', data);
                 expect(data.includes("empty")).toBe(false);
+                expect(data.length === originalSize - 1);
                 done();
               });
             });
