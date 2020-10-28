@@ -69,7 +69,6 @@ module.exports = class YjsBackend {
       throw new EEXIST();
     }
     const ino = uuidv4();
-    let entry = new Y.Map()
     let stat = {
       mode,
       type: "dir",
@@ -78,9 +77,12 @@ module.exports = class YjsBackend {
       ino,
       filepath,
     };
-    entry.set(STAT, stat);
-    this._inodes.set(ino, entry);
-    dir.set(basename, ino);
+    this._ydoc.transact(() => {
+      let entry = new Y.Map()
+      entry.set(STAT, stat);
+      this._inodes.set(ino, entry);
+      dir.set(basename, ino);
+    }, 'mkdir');
   }
   rmdir(filepath) {
     let dir = this._lookup(filepath);
@@ -91,8 +93,10 @@ module.exports = class YjsBackend {
     let parent = this._lookup(path.dirname(filepath));
     let basename = path.basename(filepath);
     const ino = parent.get(basename)
-    parent.delete(basename);
-    this._inodes.delete(ino);
+    this._ydoc.transact(() => {
+      parent.delete(basename);
+      this._inodes.delete(ino);
+    }, 'rmdir');
   }
   readdir(filepath) {
     let dir = this._lookup(filepath);
@@ -124,17 +128,21 @@ module.exports = class YjsBackend {
       ino,
       filepath,
     };
-    let entry = new Y.Map();
-    entry.set(STAT, stat);
-    dir.set(basename, ino);
-    this._inodes.set(ino, entry);
+    this._ydoc.transact(() => {
+      let entry = new Y.Map();
+      entry.set(STAT, stat);
+      this._inodes.set(ino, entry);
+      dir.set(basename, ino);
+    }, 'writeFile');
     return stat;
   }
   unlink(filepath) {
     // remove from parent
     let parent = this._lookup(path.dirname(filepath));
     let basename = path.basename(filepath);
-    parent.delete(basename);
+    this._ydoc.transact(() => {
+      parent.delete(basename);
+    }, 'unlink');
   }
   rename(oldFilepath, newFilepath) {
     let oldBasename = path.basename(oldFilepath);
@@ -145,15 +153,17 @@ module.exports = class YjsBackend {
     let srcDir = this._lookup(path.dirname(oldFilepath));
     let destDir = this._lookup(path.dirname(newFilepath));
     let ino = srcDir.get(oldBasename);
-    // insert into new parent directory
-    destDir.set(newBasename, ino)
-    // remove from old parent directory
-    srcDir.delete(oldBasename)
-    // update stat.path
     const entry = this._inodes.get(ino);
     const stat = entry.get(STAT);
-    stat.filepath = newFilepath;
-    entry.set(STAT, stat);
+    this._ydoc.transact(() => {
+      // insert into new parent directory
+      destDir.set(newBasename, ino)
+      // remove from old parent directory
+      srcDir.delete(oldBasename)
+      // update stat.path
+      stat.filepath = newFilepath;
+      entry.set(STAT, stat);
+    }, 'rename');
   }
   stat(filepath) {
     return this._lookup(filepath).get(STAT);
@@ -189,10 +199,12 @@ module.exports = class YjsBackend {
       mtimeMs: Date.now(),
       ino,
     };
-    let entry = new Y.Map();
-    entry.set(STAT, stat);
-    dir.set(basename, ino);
-    this._inodes.set(ino, entry);
+    this._ydoc.transact(() => {
+      let entry = new Y.Map();
+      entry.set(STAT, stat);
+      this._inodes.set(ino, entry);
+      dir.set(basename, ino);
+    }, 'symlink');
     return stat;
   }
   _du (dir) {
