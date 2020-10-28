@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@isomorphic-git/idb-keyval": "3.3.2",
+    "fast-diff": "^1.2.0",
     "isomorphic-textencoder": "1.0.1",
     "just-debounce-it": "1.1.0",
     "just-once": "1.1.0",

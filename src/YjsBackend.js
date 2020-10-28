@@ -1,7 +1,9 @@
+const { encode, decode } = require("isomorphic-textencoder");
 const Y = require('yjs');
 const { IndexeddbPersistence } = require('y-indexeddb');
 const { WebsocketProvider } = require('y-websocket');
 const { v4: uuidv4 } = require('uuid');
+const diff = require('fast-diff')
 
 const path = require("./path.js");
 const { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY } = require("./errors.js");
@@ -231,11 +233,44 @@ module.exports = class YjsBackend {
     return
   }
   readFileInode(inode) {
-    return this._content.get(inode);
+    let data = this._content.get(inode)
+    if (data instanceof Y.Text) {
+      data = encode(data.toString());
+    }
+    return data;
   }
-  writeFileInode(inode, data) {
-    if (typeof data === 'string') {
-      // TODO: Convert to Y.Text
+  writeFileInode(inode, data, rawdata) {
+    if (typeof rawdata === 'string') {
+      // Update existing Text
+      const oldData = this._content.get(inode);
+      if (oldData && oldData instanceof Y.Text) {
+        const oldString = oldData.toString();
+        const changes = diff(oldString, rawdata);
+        console.log('changes', changes);
+        let idx = 0;
+        for (const [kind, string] of changes) {
+          switch (kind) {
+            case diff.EQUAL: {
+              idx += string.length;
+              break;
+            }
+            case diff.DELETE: {
+              oldData.delete(idx, string.length)
+              break;
+            }
+            case diff.INSERT: {
+              oldData.insert(idx, string);
+              idx += string.length;
+              break;
+            }
+          }
+        }
+        return;
+      } else {
+        // Use new Y.Text
+        data = new Y.Text();
+        data.insert(0, rawdata);
+      }
     } else {
       // Yjs will fail if data.constructor !== Uint8Array
       if (data.constructor.name === 'Buffer') {

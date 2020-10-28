@@ -249,6 +249,7 @@ module.exports = class PromisifiedFS {
   async writeFile(filepath, data, opts) {
     ;[filepath, opts] = cleanParams(filepath, opts);
     const { mode, encoding = "utf8" } = opts;
+    let origData = data
     if (typeof data === "string") {
       if (encoding !== "utf8") {
         throw new Error('Only "utf8" encoding is supported in writeFile');
@@ -256,7 +257,7 @@ module.exports = class PromisifiedFS {
       data = encode(data);
     }
     const stat = await this._cache.writeStat(filepath, data.byteLength, { mode });
-    await this._idb.writeFileInode(stat.ino, data)
+    await this._idb.writeFileInode(stat.ino, data, origData)
     return null
   }
   async unlink(filepath, opts) {
