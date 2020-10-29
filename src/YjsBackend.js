@@ -18,6 +18,7 @@ const PARENT = 'p';
 const PREVPARENT = '-p';
 const BASENAME = 'b';
 const PREVBASENAME = '-b';
+const DELETED = 'd';
 
 module.exports = class YjsBackend {
   constructor(name) {
@@ -57,14 +58,14 @@ module.exports = class YjsBackend {
   _childrenOf(id) {
     const children = [];
     for (const value of this._inodes.values()) {
-      if (value.get(PARENT) === id) children.push(value);
+      if (value.get(PARENT) === id && !value.get(DELETED)) children.push(value);
     }
     return children;
   }
   _findChild(id, basename) {
     const children = [];
     for (const value of this._inodes.values()) {
-      if (value.get(PARENT) === id && value.get(BASENAME) === basename) return value;
+      if (value.get(PARENT) === id && value.get(BASENAME) === basename && !value.get(DELETED)) return value;
     }
     return;
   }
@@ -128,7 +129,7 @@ module.exports = class YjsBackend {
     if (this._childrenOf(ino).length > 0) throw new ENOTEMPTY();
     // delete inode
     this._ydoc.transact(() => {
-      this._inodes.delete(ino);
+      this._inodes.get(ino).set(DELETED, true);
     }, 'rmdir');
   }
   readdir(filepath) {
@@ -182,7 +183,7 @@ module.exports = class YjsBackend {
     const ino = node.get(STAT).ino;
     // delete inode
     this._ydoc.transact(() => {
-      this._inodes.delete(ino);
+      this._inodes.get(ino).set(DELETED, true);
     }, 'unlink');
   }
   rename(oldFilepath, newFilepath) {
