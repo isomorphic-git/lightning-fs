@@ -15,7 +15,9 @@ const { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY } = require("./errors.js");
 const STAT = 's';
 const CHILDREN = 'c';
 const PARENT = 'p';
+const PREVPARENT = '-p';
 const BASENAME = 'b';
+const PREVBASENAME = '-b';
 
 module.exports = class YjsBackend {
   constructor(name) {
@@ -189,12 +191,24 @@ module.exports = class YjsBackend {
     // grab references
     let node = this._lookup(oldFilepath);
     let destDir = this._lookup(path.dirname(newFilepath));
-    let basename = path.basename(newFilepath);
     // Update parent
     this._ydoc.transact(() => {
-      node.set(PARENT, destDir.get(STAT).ino);
-      if (node.get(BASENAME) !== basename) {
-        node.set(BASENAME, basename);
+      const parent = node.get(PARENT);
+      const newParent = destDir.get(STAT).ino
+      if (parent !== newParent) {
+        node.set(PARENT, newParent);
+        if (node.get(PREVPARENT) !== parent) {
+          node.set(PREVPARENT, parent);
+        }
+      }
+
+      const basename = node.get(BASENAME);
+      const newBasename = path.basename(newFilepath);
+      if (basename !== newBasename) {
+        node.set(BASENAME, newBasename);
+        if (node.get(PREVBASENAME) !== basename) {
+          node.set(PREVBASENAME, basename);
+        }
       }
     }, 'rename');
   }
