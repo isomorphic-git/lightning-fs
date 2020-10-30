@@ -1,7 +1,5 @@
-const { encode, decode } = require("isomorphic-textencoder");
+const { encode } = require("isomorphic-textencoder");
 const Y = require('yjs');
-const { IndexeddbPersistence } = require('y-indexeddb');
-const { WebsocketProvider } = require('y-websocket');
 const { nanoid } = require('nanoid');
 const diff = require('fast-diff')
 
@@ -13,7 +11,6 @@ const { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY } = require("./errors.js");
 // So for safety, I'm adding NULL because NULL is invalid as a filename character on Linux. And pretty impossible to type using a keyboard.
 // So that should handle ANY conceivable craziness.
 const STAT = 's';
-const CHILDREN = 'c';
 const PARENT = 'p';
 const PREVPARENT = '-p';
 const BASENAME = 'b';
@@ -21,25 +18,18 @@ const PREVBASENAME = '-b';
 const DELETED = 'd';
 
 module.exports = class YjsBackend {
-  constructor(name) {
-    this._ydoc = new Y.Doc();
-    this._yidb = new IndexeddbPersistence(name + '_yjs', this._ydoc);
-    // WIP: I'm adding this to get the BroadcastChannel functionality for the threadsafety tests can run.
-    this._yws = new WebsocketProvider('wss://demos.yjs.dev', 'stoplight-v0.0.1-' + name + '_yjs', this._ydoc, { connect: false });
-    this._ready = this._yidb.whenSynced.then(async () => {
-      this._inodes = this._ydoc.getMap('!inodes');
-      this._content = this._ydoc.getMap('!content');
-      if (this._inodes.size === 0) {
-        const rootdir = new Y.Map();
-        const ino = nanoid();
-        rootdir.set(STAT, { mode: 0o777, type: "dir", size: 0, ino, mtimeMs: Date.now() });
-        rootdir.set(PARENT, null);
-        rootdir.set(BASENAME, '/');
-        this._inodes.set(ino, rootdir);
-      }
-      this._yws.connectBc();
-      return 'ready';
-    });
+  constructor(ydoc) {
+    this._ydoc = ydoc;
+    this._inodes = this._ydoc.getMap('!inodes');
+    this._content = this._ydoc.getMap('!content');
+    if (this._inodes.size === 0) {
+      const rootdir = new Y.Map();
+      const ino = nanoid();
+      rootdir.set(STAT, { mode: 0o777, type: "dir", size: 0, ino, mtimeMs: Date.now() });
+      rootdir.set(PARENT, null);
+      rootdir.set(BASENAME, '/');
+      this._inodes.set(ino, rootdir);
+    }
   }
   get activated () {
     return !!this._root
