@@ -321,4 +321,7 @@ module.exports = class PromisifiedFS {
   async du(filepath) {
     return this._cache.du(filepath);
   }
+  async openYText(filepath) {
+    return this._yfs.openYText(filepath);
+  }
 }

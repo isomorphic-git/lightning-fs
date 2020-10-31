@@ -269,6 +269,13 @@ module.exports = class YjsBackend {
     let dir = this._lookup(filepath);
     return this._du(dir);
   }
+  openYText(filepath) {
+    let node = this._lookup(filepath, false);
+    let data = this._content.get(node.get(STAT).ino)
+    if (data instanceof Y.Text) {
+      return data;
+    }
+  }
 
   saveSuperblock(superblock) {
     return
