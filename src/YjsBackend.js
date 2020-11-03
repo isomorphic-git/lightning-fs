@@ -285,7 +285,8 @@ module.exports = class YjsBackend {
   }
   readFileInode(inode) {
     let data = this._content.get(inode)
-    if (data instanceof Y.Text) {
+    // instanceof doesn't work because of different Yjs instances?
+    if (data.constructor && data.constructor.name === 'YText') {
       data = encode(data.toString());
     }
     return data;
