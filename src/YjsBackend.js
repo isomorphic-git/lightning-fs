@@ -269,10 +269,10 @@ module.exports = class YjsBackend {
     let dir = this._lookup(filepath);
     return this._du(dir);
   }
-  openYText(filepath) {
+  openYType(filepath) {
     let node = this._lookup(filepath, false);
     let data = this._content.get(node.get(STAT).ino)
-    if (data instanceof Y.Text) {
+    if (data instanceof Y.AbstractType) {
       return data;
     }
   }
@@ -321,6 +321,8 @@ module.exports = class YjsBackend {
         data = new Y.Text();
         data.insert(0, rawdata);
       }
+    } else if (rawdata instanceof Y.AbstractType) {
+      data = rawdata;
     } else {
       // Yjs will fail if data.constructor !== Uint8Array
       if (data.constructor.name === 'Buffer') {
