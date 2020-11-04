@@ -87,6 +87,8 @@ module.exports = class PromisifiedFS {
       this._cache = this._yfs;
       this._idb = this._yfs;
       return this._yfs._ready;
+    } else {
+      this._yfs = void 0;
     }
     this._idb = new IdbBackend(fileDbName, fileStoreName);
     this._mutex = navigator.locks ? new Mutex2(name) : new Mutex(lockDbName, lockStoreName);
