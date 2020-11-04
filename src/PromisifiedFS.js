@@ -50,6 +50,7 @@ module.exports = class PromisifiedFS {
     this.symlink = this._wrap(this.symlink, true)
     this.backFile = this._wrap(this.backFile, true)
     this.du = this._wrap(this.du, false);
+    this.openYType = this.openYType.bind(this);
 
     this.saveSuperblock = debounce(() => {
       this._saveSuperblock();
@@ -323,7 +324,7 @@ module.exports = class PromisifiedFS {
   async du(filepath) {
     return this._cache.du(filepath);
   }
-  async openYType(filepath) {
+  openYType(filepath) {
     return this._yfs.openYType(filepath);
   }
 }
