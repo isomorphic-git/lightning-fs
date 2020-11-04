@@ -2,7 +2,7 @@ import FS from "../index.js";
 import * as Y from 'yjs';
 
 const ydoc = new Y.Doc();
-const fs = new FS("testfs-yjs", { wipe: true, yfs: { ydoc } }).promises;
+const fs = new FS("testfs-yjs", { wipe: true, yfs: { Y, ydoc } }).promises;
 
 const HELLO = new Uint8Array([72, 69, 76, 76, 79]);
 

@@ -1,5 +1,4 @@
 const { encode } = require("isomorphic-textencoder");
-const Y = require('yjs');
 const { nanoid } = require('nanoid');
 const diff = require('fast-diff')
 
@@ -18,12 +17,13 @@ const PREVBASENAME = '-b';
 const DELETED = 'd';
 
 module.exports = class YjsBackend {
-  constructor(ydoc) {
+  constructor(Y, ydoc) {
+    this.Y = Y;
     this._ydoc = ydoc;
     this._inodes = this._ydoc.getMap('!inodes');
     this._content = this._ydoc.getMap('!content');
     if (this._inodes.size === 0) {
-      const rootdir = new Y.Map();
+      const rootdir = new this.Y.Map();
       const ino = nanoid();
       rootdir.set(STAT, { mode: 0o777, type: "dir", size: 0, ino, mtimeMs: Date.now() });
       rootdir.set(PARENT, null);
@@ -104,7 +104,7 @@ module.exports = class YjsBackend {
       ino,
     };
     this._ydoc.transact(() => {
-      let entry = new Y.Map()
+      let entry = new this.Y.Map()
       entry.set(STAT, stat);
       entry.set(PARENT, dir.get(STAT).ino);
       entry.set(BASENAME, basename);
@@ -156,7 +156,7 @@ module.exports = class YjsBackend {
     this._ydoc.transact(() => {
       let entry = this._inodes.get(ino);
       if (!entry) {
-        entry = new Y.Map();
+        entry = new this.Y.Map();
         entry.set(STAT, stat);
         entry.set(PARENT, parentId);
         entry.set(BASENAME, basename);
@@ -241,7 +241,7 @@ module.exports = class YjsBackend {
     this._ydoc.transact(() => {
       let entry = this._inodes.get(ino);
       if (!entry) {
-        entry = new Y.Map();
+        entry = new this.Y.Map();
         entry.set(STAT, stat);
         entry.set(PARENT, parentId);
         entry.set(BASENAME, basename);
@@ -272,7 +272,7 @@ module.exports = class YjsBackend {
   openYType(filepath) {
     let node = this._lookup(filepath, false);
     let data = this._content.get(node.get(STAT).ino)
-    if (data instanceof Y.AbstractType) {
+    if (data instanceof this.Y.AbstractType) {
       return data;
     }
   }
@@ -285,8 +285,7 @@ module.exports = class YjsBackend {
   }
   readFileInode(inode) {
     let data = this._content.get(inode)
-    // instanceof doesn't work because of different Yjs instances?
-    if (data.constructor && data.constructor.name === 'YText') {
+    if (data.constructor && data instanceof this.Y.Text) {
       data = encode(data.toString());
     }
     return data;
@@ -295,7 +294,7 @@ module.exports = class YjsBackend {
     if (typeof rawdata === 'string') {
       // Update existing Text
       const oldData = this._content.get(inode);
-      if (oldData && oldData instanceof Y.Text) {
+      if (oldData && oldData instanceof this.Y.Text) {
         const oldString = oldData.toString();
         const changes = diff(oldString, rawdata);
         let idx = 0;
@@ -319,10 +318,10 @@ module.exports = class YjsBackend {
         return;
       } else {
         // Use new Y.Text
-        data = new Y.Text();
+        data = new this.Y.Text();
         data.insert(0, rawdata);
       }
-    } else if (rawdata instanceof Y.AbstractType) {
+    } else if (rawdata instanceof this.Y.AbstractType) {
       data = rawdata;
     } else {
       // Yjs will fail if data.constructor !== Uint8Array
