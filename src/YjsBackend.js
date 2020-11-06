@@ -9,6 +9,11 @@ const { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY } = require("./errors.js");
 // I can still totally see our own code failing to reject ':' when renaming a file though.
 // So for safety, I'm adding NULL because NULL is invalid as a filename character on Linux. And pretty impossible to type using a keyboard.
 // So that should handle ANY conceivable craziness.
+const TYPE = 't';
+const MTIME = 'm';
+const MODE = 'o';
+const CONTENT = 'c';
+const SIZE = 'i';
 const STAT = 's';
 const PARENT = 'p';
 const PREVPARENT = '-p';
@@ -96,15 +101,21 @@ module.exports = class YjsBackend {
       }
     }
     const ino = nanoid();
+    const mtimeMs = Date.now();
     let stat = {
       mode,
       type: "dir",
       size: 0,
-      mtimeMs: Date.now(),
+      mtimeMs,
       ino,
     };
     this._ydoc.transact(() => {
       let entry = new this.Y.Map()
+      entry.set(MODE, mode);
+      entry.set(TYPE, 'dir');
+      entry.set(SIZE, 0);
+      entry.set(MTIME, mtimeMs);
+
       entry.set(STAT, stat);
       entry.set(PARENT, dir.get(STAT).ino);
       entry.set(BASENAME, basename);
@@ -145,11 +156,12 @@ module.exports = class YjsBackend {
     let dir = this._lookup(path.dirname(filepath));
     let parentId = dir.get(STAT).ino;
     let basename = path.basename(filepath);
+    const mtimeMs = Date.now();
     let stat = {
       mode,
       type: "file",
       size,
-      mtimeMs: Date.now(),
+      mtimeMs,
       ino,
       filepath,
     };
@@ -157,12 +169,22 @@ module.exports = class YjsBackend {
       let entry = this._inodes.get(ino);
       if (!entry) {
         entry = new this.Y.Map();
+        entry.set(MODE, mode);
+        entry.set(TYPE, 'file');
+        entry.set(SIZE, size);
+        entry.set(MTIME, mtimeMs);
+
         entry.set(STAT, stat);
         entry.set(PARENT, parentId);
         entry.set(BASENAME, basename);
         this._inodes.set(ino, entry);
         this._computePath(ino);
       } else {
+        entry.set(MODE, mode);
+        entry.set(TYPE, 'file');
+        entry.set(SIZE, size);
+        entry.set(MTIME, mtimeMs);
+
         entry.set(STAT, stat);
       }
     }, 'writeFile');
@@ -204,10 +226,26 @@ module.exports = class YjsBackend {
     }, 'rename');
   }
   stat(filepath) {
-    return this._lookup(filepath).get(STAT);
+    const node = this._lookup(filepath);
+    const stat = {
+      mode: node.get(MODE),
+      type: node.get(TYPE),
+      size: node.get(SIZE),
+      mtimeMs: node.get(MTIME),
+      ino: node._item.parentSub,
+    };
+    return stat;
   }
   lstat(filepath) {
-    return this._lookup(filepath, false).get(STAT);
+    const node = this._lookup(filepath, false);
+    const stat = {
+      mode: node.get(MODE),
+      type: node.get(TYPE),
+      size: node.get(SIZE),
+      mtimeMs: node.get(MTIME),
+      ino: node._item.parentSub,
+    };
+    return stat;
   }
   readlink(filepath) {
     return this._lookup(filepath, false).get(STAT).target;
@@ -230,18 +268,24 @@ module.exports = class YjsBackend {
     let dir = this._lookup(path.dirname(filepath));
     let parentId = dir.get(STAT).ino;
     let basename = path.basename(filepath);
+    const mtimeMs = Date.now();
     let stat = {
       mode,
       type: "symlink",
       target,
       size: 0,
-      mtimeMs: Date.now(),
+      mtimeMs,
       ino,
     };
     this._ydoc.transact(() => {
       let entry = this._inodes.get(ino);
       if (!entry) {
         entry = new this.Y.Map();
+        entry.set(MODE, mode);
+        entry.set(TYPE, 'symlink');
+        entry.set(SIZE, 0);
+        entry.set(MTIME, mtimeMs);
+
         entry.set(STAT, stat);
         entry.set(PARENT, parentId);
         entry.set(BASENAME, basename);
