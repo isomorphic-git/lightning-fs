@@ -9,7 +9,6 @@ const TYPE = 't';
 const MTIME = 'm';
 const MODE = 'o';
 const CONTENT = 'c';
-const SIZE = 'i';
 const PARENT = 'p';
 const PREVPARENT = '-p';
 const BASENAME = 'b';
@@ -28,7 +27,6 @@ module.exports = class YjsBackend {
 
       rootdir.set(MODE, mode);
       rootdir.set(TYPE, 'dir');
-      rootdir.set(SIZE, 0);
       rootdir.set(MTIME, mtimeMs);
       rootdir.set(CONTENT, true);
 
@@ -106,7 +104,6 @@ module.exports = class YjsBackend {
       let entry = new this.Y.Map()
       entry.set(MODE, mode);
       entry.set(TYPE, 'dir');
-      entry.set(SIZE, 0);
       entry.set(MTIME, mtimeMs);
       entry.set(CONTENT, true); // must be truthy or else directory is in a "deleted" state
 
@@ -157,7 +154,6 @@ module.exports = class YjsBackend {
         entry = new this.Y.Map();
         entry.set(MODE, mode);
         entry.set(TYPE, 'file');
-        entry.set(SIZE, size);
         entry.set(MTIME, mtimeMs);
         entry.set(CONTENT, true); // set to truthy so file isn't in a "deleted" state
 
@@ -168,7 +164,6 @@ module.exports = class YjsBackend {
       } else {
         entry.set(MODE, mode);
         entry.set(TYPE, 'file');
-        entry.set(SIZE, size);
         entry.set(MTIME, mtimeMs);
       }
     }, 'writeFile');
@@ -215,7 +210,7 @@ module.exports = class YjsBackend {
     const stat = {
       mode: node.get(MODE),
       type: node.get(TYPE),
-      size: node.get(SIZE),
+      size: this._size(node),
       mtimeMs: node.get(MTIME),
       ino: node._item.parentSub,
     };
@@ -226,7 +221,7 @@ module.exports = class YjsBackend {
     const stat = {
       mode: node.get(MODE),
       type: node.get(TYPE),
-      size: node.get(SIZE),
+      size: this._size(node),
       mtimeMs: node.get(MTIME),
       ino: node._item.parentSub,
     };
@@ -261,7 +256,6 @@ module.exports = class YjsBackend {
         entry = new this.Y.Map();
         entry.set(MODE, mode);
         entry.set(TYPE, 'symlink');
-        entry.set(SIZE, 0);
         entry.set(MTIME, mtimeMs);
         entry.set(CONTENT, target);
 
@@ -272,7 +266,6 @@ module.exports = class YjsBackend {
       } else {
         entry.set(MODE, mode);
         entry.set(TYPE, 'symlink');
-        entry.set(SIZE, 0);
         entry.set(MTIME, mtimeMs);
       }
     }, 'symlink');
@@ -283,7 +276,7 @@ module.exports = class YjsBackend {
     let size = 0;
     const type = dir.get(TYPE)
     if (type === 'file') {
-      size += dir.get(SIZE);
+      size += this._size(dir);
     } else if (type === 'dir') {
       for (const entry of this._childrenOf(dir._item.parentSub)) {
         size += this._du(entry);
@@ -365,5 +358,19 @@ module.exports = class YjsBackend {
   }
   close() {
     return
+  }
+
+  _size(node) {
+    if (node.get(TYPE) !== 'file') return 0;
+
+    const content = node.get(CONTENT);
+
+    if (content instanceof this.Y.Text || typeof content === 'string') {
+      return content.length;
+    } else if (content instanceof Uint8Array) {
+      return content.byteLength;
+    } else {
+      return 0;
+    }
   }
 }
