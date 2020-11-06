@@ -5,16 +5,11 @@ const diff = require('fast-diff')
 const path = require("./path.js");
 const { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY } = require("./errors.js");
 
-// ':' is invalid as a filename character on both Mac and Windows, so these shouldn't conflict with real filenames.
-// I can still totally see our own code failing to reject ':' when renaming a file though.
-// So for safety, I'm adding NULL because NULL is invalid as a filename character on Linux. And pretty impossible to type using a keyboard.
-// So that should handle ANY conceivable craziness.
 const TYPE = 't';
 const MTIME = 'm';
 const MODE = 'o';
 const CONTENT = 'c';
 const SIZE = 'i';
-const STAT = 's';
 const PARENT = 'p';
 const PREVPARENT = '-p';
 const BASENAME = 'b';
@@ -30,7 +25,14 @@ module.exports = class YjsBackend {
     if (this._inodes.size === 0) {
       const rootdir = new this.Y.Map();
       const ino = nanoid();
-      rootdir.set(STAT, { mode: 0o777, type: "dir", size: 0, ino, mtimeMs: Date.now() });
+      const mtimeMs = Date.now();
+      const mode = 0o777;
+
+      rootdir.set(MODE, mode);
+      rootdir.set(TYPE, 'dir');
+      rootdir.set(SIZE, 0);
+      rootdir.set(MTIME, mtimeMs);
+
       rootdir.set(PARENT, null);
       rootdir.set(BASENAME, '/');
       this._inodes.set(ino, rootdir);
@@ -73,13 +75,12 @@ module.exports = class YjsBackend {
     // narrowing that set. The problem would be dealing with symlinks.
     for (let i = 0; i < parts.length; ++ i) {
       let part = parts[i];
-      dir = this._findChild(dir && dir.get(STAT).ino, part);
+      dir = this._findChild(dir && dir._item.parentSub, part);
       if (!dir) throw new ENOENT(filepath);
       // Follow symlinks
       if (follow || i < parts.length - 1) {
-        const stat = dir.get(STAT)
-        if (stat.type === 'symlink') {
-          let target = path.resolve(partialPath, stat.target)
+        if (dir.get(TYPE) === 'symlink') {
+          let target = path.resolve(partialPath, dir.get(CONTENT))
           dir = this._lookup(target)
         }
         if (!partialPath) {
@@ -95,7 +96,7 @@ module.exports = class YjsBackend {
     if (filepath === "/") throw new EEXIST();
     let dir = this._lookup(path.dirname(filepath));
     let basename = path.basename(filepath);
-    for (const child of this._childrenOf(dir.get(STAT).ino)) {
+    for (const child of this._childrenOf(dir._item.parentSub)) {
       if (child.get(BASENAME) === basename) {
         throw new EEXIST();
       }
@@ -116,16 +117,15 @@ module.exports = class YjsBackend {
       entry.set(SIZE, 0);
       entry.set(MTIME, mtimeMs);
 
-      entry.set(STAT, stat);
-      entry.set(PARENT, dir.get(STAT).ino);
+      entry.set(PARENT, dir._item.parentSub);
       entry.set(BASENAME, basename);
       this._inodes.set(ino, entry);
     }, 'mkdir');
   }
   rmdir(filepath) {
     let dir = this._lookup(filepath);
-    if (dir.get(STAT).type !== 'dir') throw new ENOTDIR();
-    const ino = dir.get(STAT).ino;
+    if (dir.get(TYPE) !== 'dir') throw new ENOTDIR();
+    const ino = dir._item.parentSub;
     // check it's empty
     if (this._childrenOf(ino).length > 0) throw new ENOTEMPTY();
     // delete inode
@@ -135,8 +135,8 @@ module.exports = class YjsBackend {
   }
   readdir(filepath) {
     let dir = this._lookup(filepath);
-    if (dir.get(STAT).type !== 'dir') throw new ENOTDIR();
-    return this._childrenOf(dir.get(STAT).ino).map(node => node.get(BASENAME));
+    if (dir.get(TYPE) !== 'dir') throw new ENOTDIR();
+    return this._childrenOf(dir._item.parentSub).map(node => node.get(BASENAME));
   }
   writeStat(filepath, size, { mode }) {
     let ino;
@@ -154,7 +154,7 @@ module.exports = class YjsBackend {
       ino = nanoid();
     }
     let dir = this._lookup(path.dirname(filepath));
-    let parentId = dir.get(STAT).ino;
+    let parentId = dir._item.parentSub;
     let basename = path.basename(filepath);
     const mtimeMs = Date.now();
     let stat = {
@@ -174,7 +174,6 @@ module.exports = class YjsBackend {
         entry.set(SIZE, size);
         entry.set(MTIME, mtimeMs);
 
-        entry.set(STAT, stat);
         entry.set(PARENT, parentId);
         entry.set(BASENAME, basename);
         this._inodes.set(ino, entry);
@@ -184,15 +183,13 @@ module.exports = class YjsBackend {
         entry.set(TYPE, 'file');
         entry.set(SIZE, size);
         entry.set(MTIME, mtimeMs);
-
-        entry.set(STAT, stat);
       }
     }, 'writeFile');
     return stat;
   }
   unlink(filepath) {
     let node = this._lookup(filepath, false);
-    const ino = node.get(STAT).ino;
+    const ino = node._item.parentSub;
     // delete inode
     this._ydoc.transact(() => {
       this._inodes.get(ino).set(DELETED, true);
@@ -207,7 +204,7 @@ module.exports = class YjsBackend {
     // Update parent
     this._ydoc.transact(() => {
       const parent = node.get(PARENT);
-      const newParent = destDir.get(STAT).ino
+      const newParent = destDir._item.parentSub
       if (parent !== newParent) {
         node.set(PARENT, newParent);
         if (node.get(PREVPARENT) !== parent) {
@@ -248,7 +245,7 @@ module.exports = class YjsBackend {
     return stat;
   }
   readlink(filepath) {
-    return this._lookup(filepath, false).get(STAT).target;
+    return this._lookup(filepath, false).get(CONTENT);
   }
   symlink(target, filepath) {
     let ino, mode;
@@ -266,7 +263,7 @@ module.exports = class YjsBackend {
       ino = nanoid();
     }
     let dir = this._lookup(path.dirname(filepath));
-    let parentId = dir.get(STAT).ino;
+    let parentId = dir._item.parentSub;
     let basename = path.basename(filepath);
     const mtimeMs = Date.now();
     let stat = {
@@ -285,25 +282,28 @@ module.exports = class YjsBackend {
         entry.set(TYPE, 'symlink');
         entry.set(SIZE, 0);
         entry.set(MTIME, mtimeMs);
+        entry.set(CONTENT, target);
 
-        entry.set(STAT, stat);
         entry.set(PARENT, parentId);
         entry.set(BASENAME, basename);
         this._inodes.set(ino, entry);
         this._computePath(ino);
       } else {
-        entry.set(STAT, stat);
+        entry.set(MODE, mode);
+        entry.set(TYPE, 'symlink');
+        entry.set(SIZE, 0);
+        entry.set(MTIME, mtimeMs);
       }
     }, 'symlink');
     return stat;
   }
   _du (dir) {
     let size = 0;
-    const stat = dir.get(STAT)
-    if (stat.type === 'file') {
-      size += stat.size;
-    } else if (stat.type === 'dir') {
-      for (const entry of this._childrenOf(stat.ino)) {
+    const type = dir.get(TYPE)
+    if (type === 'file') {
+      size += dir.get(SIZE);
+    } else if (type === 'dir') {
+      for (const entry of this._childrenOf(dir._item.parentSub)) {
         size += this._du(entry);
       }
     }
@@ -315,7 +315,7 @@ module.exports = class YjsBackend {
   }
   openYType(filepath) {
     let node = this._lookup(filepath, false);
-    let data = this._content.get(node.get(STAT).ino)
+    let data = this._content.get(node._item.parentSub)
     if (data instanceof this.Y.AbstractType) {
       return data;
     }
