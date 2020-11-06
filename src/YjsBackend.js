@@ -14,14 +14,12 @@ const PARENT = 'p';
 const PREVPARENT = '-p';
 const BASENAME = 'b';
 const PREVBASENAME = '-b';
-const DELETED = 'd';
 
 module.exports = class YjsBackend {
   constructor(Y, ydoc) {
     this.Y = Y;
     this._ydoc = ydoc;
     this._inodes = this._ydoc.getMap('!inodes');
-    this._content = this._ydoc.getMap('!content');
     if (this._inodes.size === 0) {
       const rootdir = new this.Y.Map();
       const ino = nanoid();
@@ -32,6 +30,7 @@ module.exports = class YjsBackend {
       rootdir.set(TYPE, 'dir');
       rootdir.set(SIZE, 0);
       rootdir.set(MTIME, mtimeMs);
+      rootdir.set(CONTENT, true);
 
       rootdir.set(PARENT, null);
       rootdir.set(BASENAME, '/');
@@ -55,14 +54,14 @@ module.exports = class YjsBackend {
   _childrenOf(id) {
     const children = [];
     for (const value of this._inodes.values()) {
-      if (value.get(PARENT) === id && !value.get(DELETED)) children.push(value);
+      if (value.get(PARENT) === id && value.get(CONTENT)) children.push(value);
     }
     return children;
   }
   _findChild(id, basename) {
     const children = [];
     for (const value of this._inodes.values()) {
-      if (value.get(PARENT) === id && value.get(BASENAME) === basename && !value.get(DELETED)) return value;
+      if (value.get(PARENT) === id && value.get(BASENAME) === basename && value.get(CONTENT)) return value;
     }
     return;
   }
@@ -109,6 +108,7 @@ module.exports = class YjsBackend {
       entry.set(TYPE, 'dir');
       entry.set(SIZE, 0);
       entry.set(MTIME, mtimeMs);
+      entry.set(CONTENT, true); // must be truthy or else directory is in a "deleted" state
 
       entry.set(PARENT, dir._item.parentSub);
       entry.set(BASENAME, basename);
@@ -123,7 +123,7 @@ module.exports = class YjsBackend {
     if (this._childrenOf(ino).length > 0) throw new ENOTEMPTY();
     // delete inode
     this._ydoc.transact(() => {
-      this._inodes.get(ino).set(DELETED, true);
+      this._inodes.get(ino).set(CONTENT, false);
     }, 'rmdir');
   }
   readdir(filepath) {
@@ -159,6 +159,7 @@ module.exports = class YjsBackend {
         entry.set(TYPE, 'file');
         entry.set(SIZE, size);
         entry.set(MTIME, mtimeMs);
+        entry.set(CONTENT, true); // set to truthy so file isn't in a "deleted" state
 
         entry.set(PARENT, parentId);
         entry.set(BASENAME, basename);
@@ -179,7 +180,7 @@ module.exports = class YjsBackend {
     const ino = node._item.parentSub;
     // delete inode
     this._ydoc.transact(() => {
-      this._inodes.get(ino).set(DELETED, true);
+      this._inodes.get(ino).set(CONTENT, false);
     }, 'unlink');
   }
   rename(oldFilepath, newFilepath) {
@@ -296,7 +297,7 @@ module.exports = class YjsBackend {
   }
   openYType(filepath) {
     let node = this._lookup(filepath, false);
-    let data = this._content.get(node._item.parentSub)
+    let data = node.get(CONTENT)
     if (data instanceof this.Y.AbstractType) {
       return data;
     }
@@ -309,7 +310,7 @@ module.exports = class YjsBackend {
     return
   }
   readFileInode(inode) {
-    let data = this._content.get(inode)
+    let data = this._inodes.get(inode).get(CONTENT);
     if (data.constructor && data instanceof this.Y.Text) {
       data = encode(data.toString());
     }
@@ -318,7 +319,7 @@ module.exports = class YjsBackend {
   writeFileInode(inode, data, rawdata) {
     if (typeof rawdata === 'string') {
       // Update existing Text
-      const oldData = this._content.get(inode);
+      const oldData = this._inodes.get(inode).get(CONTENT);
       if (oldData && oldData instanceof this.Y.Text) {
         const oldString = oldData.toString();
         const changes = diff(oldString, rawdata);
@@ -354,10 +355,10 @@ module.exports = class YjsBackend {
         data = new Uint8Array(data.buffer);
       }
     }
-    return this._content.set(inode, data);
+    return this._inodes.get(inode).set(CONTENT, data);
   }
   unlinkInode(inode) {
-    return this._content.delete(inode)
+    return this._inodes.get(inode).set(CONTENT, false);
   }
   wipe() {
     return [...this._root.keys()].map(key => this._root.delete(key))
