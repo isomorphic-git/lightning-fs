@@ -103,13 +103,6 @@ module.exports = class YjsBackend {
     }
     const ino = nanoid();
     const mtimeMs = Date.now();
-    let stat = {
-      mode,
-      type: "dir",
-      size: 0,
-      mtimeMs,
-      ino,
-    };
     this._ydoc.transact(() => {
       let entry = new this.Y.Map()
       entry.set(MODE, mode);
@@ -141,11 +134,11 @@ module.exports = class YjsBackend {
   writeStat(filepath, size, { mode }) {
     let ino;
     try {
-      let oldStat = this.stat(filepath);
+      const node = this._lookup(filepath);
       if (mode == null) {
-        mode = oldStat.mode;
+        mode = node.get(MODE);
       }
-      ino = oldStat.ino;
+      ino = node._item.parentSub;
     } catch (err) {}
     if (mode == null) {
       mode = 0o666;
@@ -157,14 +150,7 @@ module.exports = class YjsBackend {
     let parentId = dir._item.parentSub;
     let basename = path.basename(filepath);
     const mtimeMs = Date.now();
-    let stat = {
-      mode,
-      type: "file",
-      size,
-      mtimeMs,
-      ino,
-      filepath,
-    };
+
     this._ydoc.transact(() => {
       let entry = this._inodes.get(ino);
       if (!entry) {
@@ -185,6 +171,7 @@ module.exports = class YjsBackend {
         entry.set(MTIME, mtimeMs);
       }
     }, 'writeFile');
+    const stat = this.stat(filepath);
     return stat;
   }
   unlink(filepath) {
@@ -250,11 +237,11 @@ module.exports = class YjsBackend {
   symlink(target, filepath) {
     let ino, mode;
     try {
-      let oldStat = this.stat(filepath);
+      const node = this._lookup(filepath);
       if (mode === null) {
-        mode = oldStat.mode;
+        mode = node.get(MODE);
       }
-      ino = oldStat.ino;
+      ino = node._item.parentSub;
     } catch (err) {}
     if (mode == null) {
       mode = 0o120000;
@@ -266,14 +253,7 @@ module.exports = class YjsBackend {
     let parentId = dir._item.parentSub;
     let basename = path.basename(filepath);
     const mtimeMs = Date.now();
-    let stat = {
-      mode,
-      type: "symlink",
-      target,
-      size: 0,
-      mtimeMs,
-      ino,
-    };
+
     this._ydoc.transact(() => {
       let entry = this._inodes.get(ino);
       if (!entry) {
@@ -295,6 +275,7 @@ module.exports = class YjsBackend {
         entry.set(MTIME, mtimeMs);
       }
     }, 'symlink');
+    const stat = this.lstat(filepath);
     return stat;
   }
   _du (dir) {
