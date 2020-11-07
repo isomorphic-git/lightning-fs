@@ -16,7 +16,7 @@ if (!Promise.prototype.finally) {
   }
 }
 
-describe("YFS module", () => {
+fdescribe("YFS module", () => {
   describe("mkdir", () => {
     it("root directory already exists", (done) => {
       fs.mkdir("/").catch(err => {
@@ -96,7 +96,7 @@ describe("YFS module", () => {
     });
   });
 
-  fdescribe("readFile", () => {
+  describe("readFile", () => {
     it("read non-existant file throws", done => {
       fs.readFile("/readFile/non-existant.txt").catch(err => {
         expect(err).not.toBe(null);
@@ -208,7 +208,6 @@ describe("YFS module", () => {
         fs.mkdir("/rmdir/empty").finally(() => {
           fs.readdir("/rmdir").then(data => {
             let originalSize = data.length;
-            console.log('data', data);
             fs.rmdir("/rmdir/empty").then(() => {
               fs.readdir("/rmdir").then(data => {
                 console.log('data', data);
@@ -484,7 +483,7 @@ describe("YFS module", () => {
     });
   });
 
-  describe("benchmark", () => {
+  xdescribe("benchmark", () => {
     it("10 dir x 10 dir x 10 files", done => {
       const range = n => [...Array(n).keys()];
       const start = performance.now();

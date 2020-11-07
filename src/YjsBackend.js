@@ -69,7 +69,7 @@ module.exports = class YjsBackend {
     const children = [];
     for (const value of this._inodes) {
       const parent = parseID(value.get(PARENT))
-      if (parent && sameID(parent, id) && value.get(CONTENT)) children.push([value]);
+      if (parent && sameID(parent, id) && value.get(CONTENT)) children.push(value);
     }
     return children;
   }
@@ -127,7 +127,6 @@ module.exports = class YjsBackend {
       node.set(PARENT, serializeID(dir._item.id));
       node.set(BASENAME, basename);
       this._inodes.push([node]);
-      console.log('mkdir', JSON.stringify(node.toJSON()));
     }, 'mkdir');
   }
   rmdir(filepath) {
@@ -173,7 +172,6 @@ module.exports = class YjsBackend {
         node.set(PARENT, serializeID(parentId));
         node.set(BASENAME, basename);
         this._inodes.push([node]);
-        console.log('writeStat', JSON.stringify(node.toJSON()));
       } else {
         node.set(MODE, mode);
         node.set(TYPE, 'file');
@@ -181,7 +179,6 @@ module.exports = class YjsBackend {
       }
     }, 'writeFile');
     const stat = this.stat(filepath);
-    console.log('stat', stat);
     return stat;
   }
   unlink(filepath) {
