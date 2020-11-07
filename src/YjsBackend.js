@@ -3,6 +3,7 @@ const diff = require('fast-diff')
 
 const path = require("./path.js");
 const { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY } = require("./errors.js");
+const { bton, ntob } = require("./radix64.js");
 
 const TYPE = 't';
 const MTIME = 'm';
@@ -19,20 +20,20 @@ function ID (client, clock) {
 }
 
 function serializeID (id) {
-  const buffer = new ArrayBuffer(16);
-  const dataview = new DataView(buffer);
-  dataview.setFloat64(0, id.client);
-  dataview.setFloat64(8, id.clock);
-  return new Uint8Array(buffer);
+  return `${ntob(id.client)}-${ntob(id.clock)}`;
 }
 
 function parseID (arr) {
   if (!arr) return arr;
-  const dataview = new DataView(arr.buffer);
-  return new ID(dataview.getFloat64(0), dataview.getFloat64(8));
+  const id = arr.indexOf('-');
+  const client = bton(arr.slice(0, id));
+  const clock = bton(arr.slice(id + 1));
+  return new ID(client, clock);
 }
 
 function sameID (id1, id2) {
+  if (id1 == null && id2 == null) return true;
+  if (id1 == null || id2 == null) return false;
   return id1.client === id2.client && id1.clock === id2.clock;
 }
 
@@ -60,7 +61,24 @@ module.exports = class YjsBackend {
   get activated () {
     return true
   }
-  _getInode(id) {
+  getYTypeByIno(ino) {
+    let id = typeof ino === 'string' ? parseID(ino) : ino;
+    const item = this._find(this._ydoc.store, id);
+    return item.content.type;
+  }
+  getPathForIno(ino) {
+    let id = typeof ino === 'string' ? parseID(ino) : ino;
+    const parts = [];
+    while (id !== null) {
+      const item = this._find(this._ydoc.store, id);
+      const map = item.content.type;
+      parts.unshift(map.get(BASENAME));
+      id = parseID(map.get(PARENT));
+    }
+    return path.join(...parts);
+  }
+  _getInode(ino) {
+    const id = parseID(ino);
     const item = this._find(this._ydoc.store, id)
     const node = item.content.type;
     return node;
@@ -223,7 +241,7 @@ module.exports = class YjsBackend {
       type: node.get(TYPE),
       size: this._size(node),
       mtimeMs: node.get(MTIME),
-      ino: node._item.id,
+      ino: serializeID(node._item.id),
     };
     return stat;
   }
@@ -234,7 +252,7 @@ module.exports = class YjsBackend {
       type: node.get(TYPE),
       size: this._size(node),
       mtimeMs: node.get(MTIME),
-      ino: node._item.id,
+      ino: serializeID(node._item.id),
     };
     return stat;
   }

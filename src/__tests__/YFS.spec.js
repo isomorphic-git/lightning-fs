@@ -45,7 +45,6 @@ fdescribe("YFS module", () => {
     it("create file", done => {
       fs.mkdir("/writeFile").finally(() => {
         fs.writeFile("/writeFile/writeFile-uint8.txt", HELLO).then(() => {
-          console.log('woot')
           fs.stat("/writeFile/writeFile-uint8.txt").then(stats => {
             expect(stats.size).toEqual(5);
             done();
@@ -210,7 +209,6 @@ fdescribe("YFS module", () => {
             let originalSize = data.length;
             fs.rmdir("/rmdir/empty").then(() => {
               fs.readdir("/rmdir").then(data => {
-                console.log('data', data);
                 expect(data.includes("empty")).toBe(false);
                 expect(data.length === originalSize - 1);
                 done();
@@ -484,7 +482,7 @@ fdescribe("YFS module", () => {
   });
 
   xdescribe("benchmark", () => {
-    it("10 dir x 10 dir x 10 files", done => {
+    it("10 dir x 10 dir x 100 files", done => {
       const range = n => [...Array(n).keys()];
       const start = performance.now();
       fs.mkdir(`/benchmark`)
@@ -505,37 +503,29 @@ fdescribe("YFS module", () => {
         const end = performance.now();
         console.log(`TIME: ${end - start}ms`);
         // const keys = [...ydoc.getMap('!inodes').keys()];
-        const inodes = ydoc.getMap('!inodes');
+        const inodes = ydoc.getArray('!inodes');
         let size2 = 0
-        const keys = [...inodes.keys()];
-        const ids = keys.map(key => inodes.get(key)._item.id);
-
-        const kstart = performance.now()
-        for (const key of keys) {
-          const node = inodes.get(key);
-          const content = node.get('c');
-          if (content && content.length) {
-            size2 += content.length
-          }
-        }
-        const kend = performance.now()
+        const ids = inodes.map(map => map._item.id);
 
         const idstart = performance.now()
+        const idset = new Set()
         for (const id of ids) {
           const item = find(ydoc.store, id)
           const node = item.content.type;
           const content = node.get('c');
+          // idset.add(node.get('p'));
           if (content && content.length) {
             size2 += content.length
           }
         }
         const idend = performance.now()
 
-        console.log(`LOOKUP TIME: ${kend - kstart}ms vs ${idend - idstart}ms`);
-        expect(size2).toBe(size * 2);
+        console.log(`LOOKUP TIME: ${idend - idstart}ms`);
+        expect(size2).toBe(size);
 
         const update = Y.encodeStateAsUpdate(ydoc);
         console.log(`YJS SIZE: ${update.byteLength}`);
+        // for (const id of idset) console.log(id);
         done();
       });
     });

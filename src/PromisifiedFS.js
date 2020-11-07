@@ -51,6 +51,8 @@ module.exports = class PromisifiedFS {
     this.backFile = this._wrap(this.backFile, true)
     this.du = this._wrap(this.du, false);
     this.openYType = this.openYType.bind(this);
+    this.getYTypeByIno = this.getYTypeByIno.bind(this);
+    this.getPathForIno = this.getPathForIno.bind(this);
 
     this.saveSuperblock = debounce(() => {
       this._saveSuperblock();
@@ -326,5 +328,11 @@ module.exports = class PromisifiedFS {
   }
   openYType(filepath) {
     return this._yfs.openYType(filepath);
+  }
+  getYTypeByIno(ino) {
+    return this._yfs.getYTypeByIno(ino);
+  }
+  getPathForIno(ino) {
+    return this._yfs.getPathForIno(ino);
   }
 }
