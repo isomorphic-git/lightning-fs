@@ -1,5 +1,9 @@
+jasmine.DEFAULT_TIMEOUT_INTERVAL = 20000
+
 import FS from "../index.js";
 import * as Y from 'yjs';
+
+import { find } from 'yjs/src/utils/StructStore';
 
 const ydoc = new Y.Doc();
 const fs = new FS("testfs-yjs", { wipe: true, yfs: { Y, ydoc } }).promises;
@@ -12,7 +16,7 @@ if (!Promise.prototype.finally) {
   }
 }
 
-describe("YFS module", () => {
+fdescribe("YFS module", () => {
   describe("mkdir", () => {
     it("root directory already exists", (done) => {
       fs.mkdir("/").catch(err => {
@@ -473,6 +477,64 @@ describe("YFS module", () => {
             });
           });
         });
+      });
+    });
+  });
+
+  fdescribe("benchmark", () => {
+    it("10 dir x 10 dir x 10 files", done => {
+      const range = n => [...Array(n).keys()];
+      const start = performance.now();
+      fs.mkdir(`/benchmark`)
+      .then(() =>Promise.all(range(10).map(
+        i => fs.mkdir(`/benchmark/dir${i}`).then(
+          () => Promise.all(range(10).map(
+            j => fs.mkdir(`/benchmark/dir${i}/sub${j}`).then(
+              () => Promise.all(range(100).map(
+                k => fs.writeFile(`/benchmark/dir${i}/sub${j}/file${k}`, 'A', 'utf8')
+              ))
+            )
+          ))
+        )
+      )))
+      .then(() => fs.du('/benchmark'))
+      .then(size => {
+        expect(size).toBe(10000);
+        const end = performance.now();
+        console.log(`TIME: ${end - start}ms`);
+        // const keys = [...ydoc.getMap('!inodes').keys()];
+        const inodes = ydoc.getMap('!inodes');
+        let size2 = 0
+        const keys = [...inodes.keys()];
+        const ids = keys.map(key => inodes.get(key)._item.id);
+
+        const kstart = performance.now()
+        for (const key of keys) {
+          const node = inodes.get(key);
+          const content = node.get('c');
+          if (content && content.length) {
+            size2 += content.length
+          }
+        }
+        const kend = performance.now()
+
+        const idstart = performance.now()
+        for (const id of ids) {
+          const item = find(ydoc.store, id)
+          const node = item.content.type;
+          const content = node.get('c');
+          if (content && content.length) {
+            size2 += content.length
+          }
+        }
+        const idend = performance.now()
+
+        console.log(`LOOKUP TIME: ${kend - kstart}ms vs ${idend - idstart}ms`);
+        expect(size2).toBe(size * 2);
+
+        const update = Y.encodeStateAsUpdate(ydoc);
+        console.log(`YJS SIZE: ${update.byteLength}`);
+        done();
       });
     });
   });
