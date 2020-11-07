@@ -1,4 +1,4 @@
-jasmine.DEFAULT_TIMEOUT_INTERVAL = 20000
+// jasmine.DEFAULT_TIMEOUT_INTERVAL = 20000
 
 import FS from "../index.js";
 import * as Y from 'yjs';
@@ -6,7 +6,7 @@ import * as Y from 'yjs';
 import { find } from 'yjs/src/utils/StructStore';
 
 const ydoc = new Y.Doc();
-const fs = new FS("testfs-yjs", { wipe: true, yfs: { Y, ydoc } }).promises;
+const fs = new FS("testfs-yjs", { wipe: true, yfs: { Y, ydoc, find } }).promises;
 
 const HELLO = new Uint8Array([72, 69, 76, 76, 79]);
 
@@ -16,7 +16,7 @@ if (!Promise.prototype.finally) {
   }
 }
 
-fdescribe("YFS module", () => {
+describe("YFS module", () => {
   describe("mkdir", () => {
     it("root directory already exists", (done) => {
       fs.mkdir("/").catch(err => {
@@ -30,6 +30,8 @@ fdescribe("YFS module", () => {
       .then(() => {
         fs.stat("/mkdir-test").then(stat => {
           done();
+        }).catch(err => {
+          expect(err).toBeUndefined();
         });
       })
       .catch(err => {
@@ -43,6 +45,7 @@ fdescribe("YFS module", () => {
     it("create file", done => {
       fs.mkdir("/writeFile").finally(() => {
         fs.writeFile("/writeFile/writeFile-uint8.txt", HELLO).then(() => {
+          console.log('woot')
           fs.stat("/writeFile/writeFile-uint8.txt").then(stats => {
             expect(stats.size).toEqual(5);
             done();
@@ -93,7 +96,7 @@ fdescribe("YFS module", () => {
     });
   });
 
-  describe("readFile", () => {
+  fdescribe("readFile", () => {
     it("read non-existant file throws", done => {
       fs.readFile("/readFile/non-existant.txt").catch(err => {
         expect(err).not.toBe(null);
@@ -481,7 +484,7 @@ fdescribe("YFS module", () => {
     });
   });
 
-  fdescribe("benchmark", () => {
+  describe("benchmark", () => {
     it("10 dir x 10 dir x 10 files", done => {
       const range = n => [...Array(n).keys()];
       const start = performance.now();

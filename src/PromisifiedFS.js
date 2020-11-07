@@ -84,7 +84,7 @@ module.exports = class PromisifiedFS {
     await this._gracefulShutdown()
     this._name = name
     if (yfs) {
-      this._yfs = new YjsBackend(yfs.Y, yfs.ydoc);
+      this._yfs = new YjsBackend(yfs.Y, yfs.ydoc, yfs.find);
       this._cache = this._yfs;
       this._idb = this._yfs;
       return this._yfs._ready;
