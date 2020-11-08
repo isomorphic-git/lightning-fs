@@ -16,7 +16,7 @@ if (!Promise.prototype.finally) {
   }
 }
 
-fdescribe("YFS module", () => {
+describe("YFS module", () => {
   describe("mkdir", () => {
     it("root directory already exists", (done) => {
       fs.mkdir("/").catch(err => {

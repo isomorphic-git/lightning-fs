@@ -9,10 +9,9 @@ const TYPE = 't';
 const MTIME = 'm';
 const MODE = 'o';
 const CONTENT = 'c';
-const PARENT = 'p';
-const PREVPARENT = '-p';
-const BASENAME = 'b';
-const PREVBASENAME = '-b';
+const PATH = 'p';
+const PARENT = 0;
+const BASENAME = 1;
 
 function ID (client, clock) {
   this.client = client;
@@ -37,6 +36,10 @@ function sameID (id1, id2) {
   return id1.client === id2.client && id1.clock === id2.clock;
 }
 
+function ylast (yarr) {
+  return yarr.get(yarr.length - 1);
+}
+
 module.exports = class YjsBackend {
   constructor(Y, ydoc, find) {
     this.Y = Y;
@@ -53,8 +56,9 @@ module.exports = class YjsBackend {
       rootdir.set(MTIME, mtimeMs);
       rootdir.set(CONTENT, true);
 
-      rootdir.set(PARENT, null);
-      rootdir.set(BASENAME, '/');
+      const path = new this.Y.Array();
+      path.push([[null, '/']]);
+      rootdir.set(PATH, path);
       this._inodes.push([rootdir]);
     }
   }
@@ -72,8 +76,9 @@ module.exports = class YjsBackend {
     while (id !== null) {
       const item = this._find(this._ydoc.store, id);
       const map = item.content.type;
-      parts.unshift(map.get(BASENAME));
-      id = parseID(map.get(PARENT));
+      const last = ylast(map.get(PATH));
+      parts.unshift(last[BASENAME]);
+      id = parseID(last[PARENT]);
     }
     return path.join(...parts);
   }
@@ -86,15 +91,17 @@ module.exports = class YjsBackend {
   _childrenOf(id) {
     const children = [];
     for (const value of this._inodes) {
-      const parent = parseID(value.get(PARENT))
+      const last = ylast(value.get(PATH));
+      const parent = parseID(last[PARENT]);
       if (parent && sameID(parent, id) && value.get(CONTENT)) children.push(value);
     }
     return children;
   }
   _findChild(id, basename) {
     for (const value of this._inodes) {
-      const parent = parseID(value.get(PARENT))
-      if (parent && sameID(parent, id) && value.get(BASENAME) === basename && value.get(CONTENT)) return value;
+      const last = ylast(value.get(PATH));
+      const parent = parseID(last[PARENT])
+      if (parent && sameID(parent, id) && last[BASENAME] === basename && value.get(CONTENT)) return value;
     }
     return;
   }
@@ -130,7 +137,8 @@ module.exports = class YjsBackend {
     let dir = this._lookup(path.dirname(filepath));
     let basename = path.basename(filepath);
     for (const child of this._childrenOf(dir._item.id)) {
-      if (child.get(BASENAME) === basename) {
+      const last = ylast(child.get(PATH))
+      if (last[BASENAME] === basename) {
         throw new EEXIST();
       }
     }
@@ -142,8 +150,9 @@ module.exports = class YjsBackend {
       node.set(MTIME, mtimeMs);
       node.set(CONTENT, true); // must be truthy or else directory is in a "deleted" state
 
-      node.set(PARENT, serializeID(dir._item.id));
-      node.set(BASENAME, basename);
+      const path = new this.Y.Array();
+      path.push([[serializeID(dir._item.id), basename]]);
+      node.set(PATH, path);
       this._inodes.push([node]);
     }, 'mkdir');
   }
@@ -161,7 +170,7 @@ module.exports = class YjsBackend {
   readdir(filepath) {
     let dir = this._lookup(filepath);
     if (dir.get(TYPE) !== 'dir') throw new ENOTDIR();
-    return this._childrenOf(dir._item.id).map(node => node.get(BASENAME));
+    return this._childrenOf(dir._item.id).map(node => ylast(node.get(PATH))[BASENAME]);
   }
   writeStat(filepath, size, { mode }) {
     let node
@@ -187,8 +196,9 @@ module.exports = class YjsBackend {
         node.set(MTIME, mtimeMs);
         node.set(CONTENT, true); // set to truthy so file isn't in a "deleted" state
 
-        node.set(PARENT, serializeID(parentId));
-        node.set(BASENAME, basename);
+        const path = new this.Y.Array();
+        path.push([[serializeID(parentId), basename]])
+        node.set(PATH, path);
         this._inodes.push([node]);
       } else {
         node.set(MODE, mode);
@@ -212,26 +222,11 @@ module.exports = class YjsBackend {
     // grab references
     let node = this._lookup(oldFilepath);
     let destDir = this._lookup(path.dirname(newFilepath));
+    const basename = path.basename(newFilepath);
     // Update parent
     this._ydoc.transact(() => {
-      const parent = parseID(node.get(PARENT));
-      const newParent = destDir._item.id
-      if (!sameID(parent, newParent)) {
-        node.set(PARENT, serializeID(newParent));
-        const prevParent = parseID(node.get(PREVPARENT));
-        if (!sameID(prevParent, parent)) {
-          node.set(PREVPARENT, node.get(PARENT));
-        }
-      }
-
-      const basename = node.get(BASENAME);
-      const newBasename = path.basename(newFilepath);
-      if (basename !== newBasename) {
-        node.set(BASENAME, newBasename);
-        if (node.get(PREVBASENAME) !== basename) {
-          node.set(PREVBASENAME, basename);
-        }
-      }
+      const newParent = serializeID(destDir._item.id);
+      node.get(PATH).push([[newParent, basename]]);
     }, 'rename');
   }
   stat(filepath) {
@@ -283,13 +278,15 @@ module.exports = class YjsBackend {
         node.set(MTIME, mtimeMs);
         node.set(CONTENT, target);
 
-        node.set(PARENT, serializeID(parentId));
-        node.set(BASENAME, basename);
+        const path = new this.Y.Array();
+        path.push([[serializeID(parentId), basename]]);
+        node.set(PATH, path);
         this._inodes.push([node]);
       } else {
         node.set(MODE, mode);
         node.set(TYPE, 'symlink');
         node.set(MTIME, mtimeMs);
+        node.set(CONTENT, target);
       }
     }, 'symlink');
     const stat = this.lstat(filepath);
