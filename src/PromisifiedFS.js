@@ -12,7 +12,7 @@ const Mutex2 = require("./Mutex2.js");
 const path = require("./path.js");
 const clock = require("./clock.js");
 
-function cleanParams(filepath, opts) {
+function cleanParamsFilepathOpts(filepath, opts, ...rest) {
   // normalize paths
   filepath = path.normalize(filepath);
   // strip out callbacks
@@ -25,30 +25,46 @@ function cleanParams(filepath, opts) {
       encoding: opts,
     };
   }
-  return [filepath, opts];
+  return [filepath, opts, ...rest];
 }
 
-function cleanParams2(oldFilepath, newFilepath) {
+function cleanParamsFilepathDataOpts(filepath, data, opts, ...rest) {
   // normalize paths
-  return [path.normalize(oldFilepath), path.normalize(newFilepath)];
+  filepath = path.normalize(filepath);
+  // strip out callbacks
+  if (typeof opts === "undefined" || typeof opts === "function") {
+    opts = {};
+  }
+  // expand string options to encoding options
+  if (typeof opts === "string") {
+    opts = {
+      encoding: opts,
+    };
+  }
+  return [filepath, data, opts, ...rest];
+}
+
+function cleanParamsFilepathFilepath(oldFilepath, newFilepath, ...rest) {
+  // normalize paths
+  return [path.normalize(oldFilepath), path.normalize(newFilepath), ...rest];
 }
 
 module.exports = class PromisifiedFS {
   constructor(name, options) {
     this.init = this.init.bind(this)
-    this.readFile = this._wrap(this.readFile, false)
-    this.writeFile = this._wrap(this.writeFile, true)
-    this.unlink = this._wrap(this.unlink, true)
-    this.readdir = this._wrap(this.readdir, false)
-    this.mkdir = this._wrap(this.mkdir, true)
-    this.rmdir = this._wrap(this.rmdir, true)
-    this.rename = this._wrap(this.rename, true)
-    this.stat = this._wrap(this.stat, false)
-    this.lstat = this._wrap(this.lstat, false)
-    this.readlink = this._wrap(this.readlink, false)
-    this.symlink = this._wrap(this.symlink, true)
-    this.backFile = this._wrap(this.backFile, true)
-    this.du = this._wrap(this.du, false);
+    this.readFile = this._wrap(this.readFile, cleanParamsFilepathOpts, false)
+    this.writeFile = this._wrap(this.writeFile, cleanParamsFilepathDataOpts, true)
+    this.unlink = this._wrap(this.unlink, cleanParamsFilepathOpts, true)
+    this.readdir = this._wrap(this.readdir, cleanParamsFilepathOpts, false)
+    this.mkdir = this._wrap(this.mkdir, cleanParamsFilepathOpts, true)
+    this.rmdir = this._wrap(this.rmdir, cleanParamsFilepathOpts, true)
+    this.rename = this._wrap(this.rename, cleanParamsFilepathFilepath, true)
+    this.stat = this._wrap(this.stat, cleanParamsFilepathOpts, false)
+    this.lstat = this._wrap(this.lstat, cleanParamsFilepathOpts, false)
+    this.readlink = this._wrap(this.readlink, cleanParamsFilepathOpts, false)
+    this.symlink = this._wrap(this.symlink, cleanParamsFilepathFilepath, true)
+    this.backFile = this._wrap(this.backFile, cleanParamsFilepathOpts, true)
+    this.du = this._wrap(this.du, cleanParamsFilepathOpts, false);
 
     this.saveSuperblock = debounce(() => {
       this._saveSuperblock();
@@ -111,9 +127,10 @@ module.exports = class PromisifiedFS {
       this._gracefulShutdownResolve = null
     }
   }
-  _wrap (fn, mutating) {
+  _wrap (fn, paramCleaner, mutating) {
     let i = 0
     return async (...args) => {
+      args = paramCleaner(...args)
       let op = {
         name: fn.name,
         args,
@@ -209,7 +226,6 @@ module.exports = class PromisifiedFS {
     return this._cache.writeStat(filepath, size, opts)
   }
   async readFile(filepath, opts) {
-    ;[filepath, opts] = cleanParams(filepath, opts);
     const { encoding } = opts;
     if (encoding && encoding !== 'utf8') throw new Error('Only "utf8" encoding is supported in readFile');
     let data = null, stat = null
@@ -240,7 +256,6 @@ module.exports = class PromisifiedFS {
     return data;
   }
   async writeFile(filepath, data, opts) {
-    ;[filepath, opts] = cleanParams(filepath, opts);
     const { mode, encoding = "utf8" } = opts;
     if (typeof data === "string") {
       if (encoding !== "utf8") {
@@ -253,7 +268,6 @@ module.exports = class PromisifiedFS {
     return null
   }
   async unlink(filepath, opts) {
-    ;[filepath, opts] = cleanParams(filepath, opts);
     const stat = this._cache.lstat(filepath);
     this._cache.unlink(filepath);
     if (stat.type !== 'symlink') {
@@ -262,17 +276,14 @@ module.exports = class PromisifiedFS {
     return null
   }
   async readdir(filepath, opts) {
-    ;[filepath, opts] = cleanParams(filepath, opts);
     return this._cache.readdir(filepath);
   }
   async mkdir(filepath, opts) {
-    ;[filepath, opts] = cleanParams(filepath, opts);
     const { mode = 0o777 } = opts;
     await this._cache.mkdir(filepath, { mode });
     return null
   }
   async rmdir(filepath, opts) {
-    ;[filepath, opts] = cleanParams(filepath, opts);
     // Never allow deleting the root directory.
     if (filepath === "/") {
       throw new ENOTEMPTY();
@@ -281,31 +292,25 @@ module.exports = class PromisifiedFS {
     return null;
   }
   async rename(oldFilepath, newFilepath) {
-    ;[oldFilepath, newFilepath] = cleanParams2(oldFilepath, newFilepath);
     this._cache.rename(oldFilepath, newFilepath);
     return null;
   }
   async stat(filepath, opts) {
-    ;[filepath, opts] = cleanParams(filepath, opts);
     const data = this._cache.stat(filepath);
     return new Stat(data);
   }
   async lstat(filepath, opts) {
-    ;[filepath, opts] = cleanParams(filepath, opts);
     let data = this._cache.lstat(filepath);
     return new Stat(data);
   }
   async readlink(filepath, opts) {
-    ;[filepath, opts] = cleanParams(filepath, opts);
     return this._cache.readlink(filepath);
   }
   async symlink(target, filepath) {
-    ;[target, filepath] = cleanParams2(target, filepath);
     this._cache.symlink(target, filepath);
     return null;
   }
   async backFile(filepath, opts) {
-    ;[filepath, opts] = cleanParams(filepath, opts);
     let size = await this._http.sizeFile(filepath)
     await this._writeStat(filepath, size, opts)
     return null
