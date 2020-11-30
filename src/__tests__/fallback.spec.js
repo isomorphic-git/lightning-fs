@@ -4,7 +4,7 @@ const fs = new FS("fallbackfs", { wipe: true, url: 'http://localhost:9876/base/s
 
 describe("http fallback", () => {
   it("sanity check", () => {
-    expect(fs.promises._http).not.toBeFalsy()
+    expect(fs.promises._backend._http).not.toBeFalsy()
   })
   it("loads", (done) => {
     fs.promises._activate().then(() => {

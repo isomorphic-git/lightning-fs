@@ -1,16 +1,7 @@
-const { encode, decode } = require("isomorphic-textencoder");
-const debounce = require("just-debounce-it");
-
+const DefaultBackend = require("./DefaultBackend.js");
 const Stat = require("./Stat.js");
-const CacheFS = require("./CacheFS.js");
-const { ENOENT, ENOTEMPTY, ETIMEDOUT } = require("./errors.js");
-const IdbBackend = require("./IdbBackend.js");
-const HttpBackend = require("./HttpBackend.js")
-const Mutex = require("./Mutex.js");
-const Mutex2 = require("./Mutex2.js");
 
 const path = require("./path.js");
-const clock = require("./clock.js");
 
 function cleanParamsFilepathOpts(filepath, opts, ...rest) {
   // normalize paths
@@ -49,74 +40,52 @@ function cleanParamsFilepathFilepath(oldFilepath, newFilepath, ...rest) {
   return [path.normalize(oldFilepath), path.normalize(newFilepath), ...rest];
 }
 
-module.exports = class PromisifiedFS {
-  constructor(name, options) {
-    this.init = this.init.bind(this)
-    this.readFile = this._wrap(this.readFile, cleanParamsFilepathOpts, false)
-    this.writeFile = this._wrap(this.writeFile, cleanParamsFilepathDataOpts, true)
-    this.unlink = this._wrap(this.unlink, cleanParamsFilepathOpts, true)
-    this.readdir = this._wrap(this.readdir, cleanParamsFilepathOpts, false)
-    this.mkdir = this._wrap(this.mkdir, cleanParamsFilepathOpts, true)
-    this.rmdir = this._wrap(this.rmdir, cleanParamsFilepathOpts, true)
-    this.rename = this._wrap(this.rename, cleanParamsFilepathFilepath, true)
-    this.stat = this._wrap(this.stat, cleanParamsFilepathOpts, false)
-    this.lstat = this._wrap(this.lstat, cleanParamsFilepathOpts, false)
-    this.readlink = this._wrap(this.readlink, cleanParamsFilepathOpts, false)
-    this.symlink = this._wrap(this.symlink, cleanParamsFilepathFilepath, true)
-    this.backFile = this._wrap(this.backFile, cleanParamsFilepathOpts, true)
-    this.du = this._wrap(this.du, cleanParamsFilepathOpts, false);
+module.exports = function promises(name, options) {
+  const pfs = new PromisifiedFS(options);
+  pfs.init = pfs.init.bind(pfs)
+  pfs.readFile = pfs._wrap(pfs.readFile, cleanParamsFilepathOpts, false)
+  pfs.writeFile = pfs._wrap(pfs.writeFile, cleanParamsFilepathDataOpts, true)
+  pfs.unlink = pfs._wrap(pfs.unlink, cleanParamsFilepathOpts, true)
+  pfs.readdir = pfs._wrap(pfs.readdir, cleanParamsFilepathOpts, false)
+  pfs.mkdir = pfs._wrap(pfs.mkdir, cleanParamsFilepathOpts, true)
+  pfs.rmdir = pfs._wrap(pfs.rmdir, cleanParamsFilepathOpts, true)
+  pfs.rename = pfs._wrap(pfs.rename, cleanParamsFilepathFilepath, true)
+  pfs.stat = pfs._wrap(pfs.stat, cleanParamsFilepathOpts, false)
+  pfs.lstat = pfs._wrap(pfs.lstat, cleanParamsFilepathOpts, false)
+  pfs.readlink = pfs._wrap(pfs.readlink, cleanParamsFilepathOpts, false)
+  pfs.symlink = pfs._wrap(pfs.symlink, cleanParamsFilepathFilepath, true)
+  pfs.backFile = pfs._wrap(pfs.backFile, cleanParamsFilepathOpts, true)
+  pfs.du = pfs._wrap(pfs.du, cleanParamsFilepathOpts, false);
 
-    this.saveSuperblock = debounce(() => {
-      this._saveSuperblock();
-    }, 500);
+  if (name) {
+    pfs.init(name, options)
+  }
+  return pfs;
+}
+
+class PromisifiedFS {
+  constructor(options = {}) {
+    this._backend = options.backend || new DefaultBackend();
 
     this._deactivationPromise = null
     this._deactivationTimeout = null
     this._activationPromise = null
 
     this._operations = new Set()
-
-    if (name) {
-      this.init(name, options)
-    }
   }
   async init (...args) {
     if (this._initPromiseResolve) await this._initPromise;
     this._initPromise = this._init(...args)
     return this._initPromise
   }
-  async _init (name, {
-    wipe,
-    url,
-    urlauto,
-    fileDbName = name,
-    fileStoreName = name + "_files",
-    lockDbName = name + "_lock",
-    lockStoreName = name + "_lock",
-    defer = false,
-  } = {}) {
-    await this._gracefulShutdown()
-    this._name = name
-    this._idb = new IdbBackend(fileDbName, fileStoreName);
-    this._mutex = navigator.locks ? new Mutex2(name) : new Mutex(lockDbName, lockStoreName);
-    this._cache = new CacheFS(name);
-    this._opts = { wipe, url };
-    this._needsWipe = !!wipe;
-    if (url) {
-      this._http = new HttpBackend(url)
-      this._urlauto = !!urlauto
-    }
+  async _init (name, options = {}) {
+    await this._gracefulShutdown();
+
+    await this._backend.init(name, options);
+
     if (this._initPromiseResolve) {
       this._initPromiseResolve();
       this._initPromiseResolve = null;
-    }
-    // The next comment starting with the "fs is initially activated when constructed"?
-    // That can create contention for the mutex if two threads try to init at the same time
-    // so I've added an option to disable that behavior.
-    if (!defer) {
-      // The fs is initially activated when constructed (in order to wipe/save the superblock)
-      // This is not awaited, because that would create a cycle.
-      this.stat('/')
     }
   }
   async _gracefulShutdown () {
@@ -128,7 +97,6 @@ module.exports = class PromisifiedFS {
     }
   }
   _wrap (fn, paramCleaner, mutating) {
-    let i = 0
     return async (...args) => {
       args = paramCleaner(...args)
       let op = {
@@ -141,7 +109,7 @@ module.exports = class PromisifiedFS {
         return await fn.apply(this, args)
       } finally {
         this._operations.delete(op)
-        if (mutating) this.saveSuperblock() // this is debounced
+        if (mutating) this._backend.saveSuperblock() // this is debounced
         if (this._operations.size === 0) {
           if (!this._deactivationTimeout) clearTimeout(this._deactivationTimeout)
           this._deactivationTimeout = setTimeout(this._deactivate.bind(this), 500)
@@ -158,164 +126,62 @@ module.exports = class PromisifiedFS {
     }
     if (this._deactivationPromise) await this._deactivationPromise
     this._deactivationPromise = null
-    if (!this._activationPromise) this._activationPromise = this.__activate()
+    if (!this._activationPromise) this._activationPromise = this._backend.activate();
     await this._activationPromise
-    if (await this._mutex.has()) {
-      return
-    } else {
-      throw new ETIMEDOUT()
-    }
-  }
-  async __activate() {
-    if (this._cache.activated) return
-    // Wipe IDB if requested
-    if (this._needsWipe) {
-      this._needsWipe = false;
-      await this._idb.wipe()
-      await this._mutex.release({ force: true })
-    }
-    if (!(await this._mutex.has())) await this._mutex.wait()
-    // Attempt to load FS from IDB backend
-    const root = await this._idb.loadSuperblock()
-    if (root) {
-      this._cache.activate(root);
-    } else if (this._http) {
-      // If that failed, attempt to load FS from HTTP backend
-      const text = await this._http.loadSuperblock()
-      this._cache.activate(text)
-      await this._saveSuperblock();
-    } else {
-      // If there is no HTTP backend, start with an empty filesystem
-      this._cache.activate()
-    }
   }
   async _deactivate() {
     if (this._activationPromise) await this._activationPromise
-    if (!this._deactivationPromise) this._deactivationPromise = this.__deactivate()
+    if (!this._deactivationPromise) this._deactivationPromise = this._backend.deactivate();
     this._activationPromise = null
     if (this._gracefulShutdownResolve) this._gracefulShutdownResolve()
     return this._deactivationPromise
   }
-  async __deactivate() {
-    if (await this._mutex.has()) {
-      await this._saveSuperblock()
-    }
-    this._cache.deactivate()
-    try {
-      await this._mutex.release()
-    } catch (e) {
-      console.log(e)
-    }
-    await this._idb.close()
-  }
-  async _saveSuperblock() {
-    if (this._cache.activated) {
-      this._lastSavedAt = Date.now()
-      await this._idb.saveSuperblock(this._cache._root);
-    }
-  }
-  async _writeStat(filepath, size, opts) {
-    let dirparts = path.split(path.dirname(filepath))
-    let dir = dirparts.shift()
-    for (let dirpart of dirparts) {
-      dir = path.join(dir, dirpart)
-      try {
-        this._cache.mkdir(dir, { mode: 0o777 })
-      } catch (e) {}
-    }
-    return this._cache.writeStat(filepath, size, opts)
-  }
   async readFile(filepath, opts) {
-    const { encoding } = opts;
-    if (encoding && encoding !== 'utf8') throw new Error('Only "utf8" encoding is supported in readFile');
-    let data = null, stat = null
-    try {
-      stat = this._cache.stat(filepath);
-      data = await this._idb.readFile(stat.ino)
-    } catch (e) {
-      if (!this._urlauto) throw e
-    }
-    if (!data && this._http) {
-      let lstat = this._cache.lstat(filepath)
-      while (lstat.type === 'symlink') {
-        filepath = path.resolve(path.dirname(filepath), lstat.target)
-        lstat = this._cache.lstat(filepath)
-      }
-      data = await this._http.readFile(filepath)
-    }
-    if (data) {
-      if (!stat || stat.size != data.byteLength) {
-        stat = await this._writeStat(filepath, data.byteLength, { mode: stat ? stat.mode : 0o666 })
-        this.saveSuperblock() // debounced
-      }
-      if (encoding === "utf8") {
-        data = decode(data);
-      }
-    }
-    if (!stat) throw new ENOENT(filepath)
-    return data;
+    return this._backend.readFile(filepath, opts);
   }
   async writeFile(filepath, data, opts) {
-    const { mode, encoding = "utf8" } = opts;
-    if (typeof data === "string") {
-      if (encoding !== "utf8") {
-        throw new Error('Only "utf8" encoding is supported in writeFile');
-      }
-      data = encode(data);
-    }
-    const stat = await this._cache.writeStat(filepath, data.byteLength, { mode });
-    await this._idb.writeFile(stat.ino, data)
+    await this._backend.writeFile(filepath, data, opts);
     return null
   }
   async unlink(filepath, opts) {
-    const stat = this._cache.lstat(filepath);
-    this._cache.unlink(filepath);
-    if (stat.type !== 'symlink') {
-      await this._idb.unlink(stat.ino)
-    }
+    await this._backend.unlink(filepath, opts);
     return null
   }
   async readdir(filepath, opts) {
-    return this._cache.readdir(filepath);
+    return this._backend.readdir(filepath, opts);
   }
   async mkdir(filepath, opts) {
-    const { mode = 0o777 } = opts;
-    await this._cache.mkdir(filepath, { mode });
+    await this._backend.mkdir(filepath, opts);
     return null
   }
   async rmdir(filepath, opts) {
-    // Never allow deleting the root directory.
-    if (filepath === "/") {
-      throw new ENOTEMPTY();
-    }
-    this._cache.rmdir(filepath);
+    await this._backend.rmdir(filepath, opts);
     return null;
   }
   async rename(oldFilepath, newFilepath) {
-    this._cache.rename(oldFilepath, newFilepath);
+    await this._backend.rename(oldFilepath, newFilepath);
     return null;
   }
   async stat(filepath, opts) {
-    const data = this._cache.stat(filepath);
+    const data = await this._backend.stat(filepath, opts);
     return new Stat(data);
   }
   async lstat(filepath, opts) {
-    let data = this._cache.lstat(filepath);
+    const data = await this._backend.lstat(filepath, opts);
     return new Stat(data);
   }
   async readlink(filepath, opts) {
-    return this._cache.readlink(filepath);
+    return this._backend.readlink(filepath, opts);
   }
   async symlink(target, filepath) {
-    this._cache.symlink(target, filepath);
+    await this._backend.symlink(target, filepath);
     return null;
   }
   async backFile(filepath, opts) {
-    let size = await this._http.sizeFile(filepath)
-    await this._writeStat(filepath, size, opts)
+    await this._backend.backFile(filepath, opts);
     return null
   }
   async du(filepath) {
-    return this._cache.du(filepath);
+    return this._backend.du(filepath);
   }
 }
