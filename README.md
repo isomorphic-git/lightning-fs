@@ -213,6 +213,8 @@ If that fits your needs, then you can provide a `backend` option and LightningFS
 
 **Note:** If you use a custom backend, you are responsible for managing multi-threaded access - there are no magic mutexes included by default.
 
+Note: throwing an error with the correct `.code` property for any given situation is often important for utilities like `mkdirp` and `rimraf` to work.
+
 ```tsx
 
 type EncodingOpts = {
@@ -230,21 +232,21 @@ type StatLike = {
 
 interface IBackend {
   // highly recommended - usually necessary for apps to work
-  readFile(filepath: string, opts: EncodingOpts): Awaited<Uint8Array | string>;
-  writeFile(filepath: string, data: Uint8Array | string, opts: EncodingOpts): void;
-  unlink(filepath: string, opts: any): void;
-  readdir(filepath: string, opts: any): Awaited<string[]>;
-  mkdir(filepath: string, opts: any): void;
-  rmdir(filepath: string, opts: any): void;
+  readFile(filepath: string, opts: EncodingOpts): Awaited<Uint8Array | string>; // throws ENOENT
+  writeFile(filepath: string, data: Uint8Array | string, opts: EncodingOpts): void; // throws ENOENT
+  unlink(filepath: string, opts: any): void; // throws ENOENT
+  readdir(filepath: string, opts: any): Awaited<string[]>; // throws ENOENT, ENOTDIR
+  mkdir(filepath: string, opts: any): void; // throws ENOENT, EEXIST
+  rmdir(filepath: string, opts: any): void; // throws ENOENT, ENOTDIR, ENOTEMPTY
 
   // recommended - often necessary for apps to work
-  stat(filepath: string, opts: any): Awaited<StatLike>;
-  lstat(filepath: string, opts: any): Awaited<StatLike>;
+  stat(filepath: string, opts: any): Awaited<StatLike>; // throws ENOENT
+  lstat(filepath: string, opts: any): Awaited<StatLike>; // throws ENOENT
 
   // suggested - used occasionally by apps
-  rename(oldFilepath: string, newFilepath: string): void;
-  readlink(filepath: string, opts: any): Awaited<string>;
-  symlink(target: string, filepath: string): void;
+  rename(oldFilepath: string, newFilepath: string): void; // throws ENOENT
+  readlink(filepath: string, opts: any): Awaited<string>; // throws ENOENT
+  symlink(target: string, filepath: string): void; // throws ENOENT
 
   // bonus - not part of the standard `fs` module
   backFile(filepath: string, opts: any): void;
