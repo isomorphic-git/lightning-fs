@@ -1,6 +1,6 @@
 const { encode } = require("isomorphic-textencoder");
+const path = require("@stoplight/path");
 
-const path = require("./path.js");
 const { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY } = require("./errors.js");
 const { bton, ntob } = require("./radix64.js");
 
@@ -37,6 +37,23 @@ function sameID (id1, id2) {
 
 function ylast (yarr) {
   return yarr.get(yarr.length - 1);
+}
+
+function splitPath(path) {
+  if (path.length === 0) return [];
+  if (path === "/") return ["/"];
+  let parts = path.split("/");
+  if (parts[parts.length - 1] === '') {
+      parts.pop();
+  }
+  if (path[0] === "/") {
+    parts[0] = "/";
+  } else {
+    if (parts[0] !== ".") {
+      parts.unshift(".");
+    }
+  }
+  return parts;
 }
 
 module.exports = class YjsBackend {
@@ -117,7 +134,7 @@ module.exports = class YjsBackend {
     let dir = this._inodes.get(0);
     if (filepath === '/') return dir;
     let partialPath = '/'
-    let parts = path.split(filepath)
+    let parts = splitPath(filepath)
     // TODO: Actually, given we can reconstruct paths from the bottom up,
     // it might be faster to search by matching against the basepath and then
     // narrowing that set. The problem would be dealing with symlinks.
