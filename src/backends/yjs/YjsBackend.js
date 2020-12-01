@@ -1,7 +1,7 @@
 const { encode } = require("isomorphic-textencoder");
 
-const path = require("../../path.js");
-const { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY } = require("../../errors.js");
+const path = require("./path.js");
+const { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY } = require("./errors.js");
 const { bton, ntob } = require("./radix64.js");
 
 const TYPE = 't';
