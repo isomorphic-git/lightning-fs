@@ -1,5 +1,4 @@
 const { encode } = require("isomorphic-textencoder");
-const diff = require('fast-diff')
 
 const path = require("./path.js");
 const { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY } = require("./errors.js");
@@ -56,14 +55,23 @@ module.exports = class YjsBackend {
       rootdir.set(MTIME, mtimeMs);
       rootdir.set(CONTENT, true);
 
-      const path = new this.Y.Array();
-      path.push([[null, '/']]);
-      rootdir.set(PATH, path);
+      const _path = new this.Y.Array();
+      _path.push([[null, '/']]);
+      rootdir.set(PATH, _path);
       this._inodes.push([rootdir]);
     }
   }
-  get activated () {
-    return true
+  async init() {
+    return; // TODO: Could connect to server, wait for documents to sync
+  }
+  async activate() {
+    return;
+  }
+  async deactivate() {
+    return;
+  }
+  async saveSuperblock() {
+    return;
   }
   getYTypeByIno(ino) {
     let id = typeof ino === 'string' ? parseID(ino) : ino;
@@ -113,7 +121,7 @@ module.exports = class YjsBackend {
     // TODO: Actually, given we can reconstruct paths from the bottom up,
     // it might be faster to search by matching against the basepath and then
     // narrowing that set. The problem would be dealing with symlinks.
-    for (let i = 1; i < parts.length; ++ i) {
+    for (let i = 1; i < parts.length; i++) {
       let part = parts[i];
       dir = this._findChild(dir._item.id, part);
       if (!dir) throw new ENOENT(filepath);
@@ -132,7 +140,8 @@ module.exports = class YjsBackend {
     }
     return dir;
   }
-  mkdir(filepath, { mode }) {
+  mkdir(filepath, opts) {
+    const { mode = 0o777 } = opts;
     if (filepath === "/") throw new EEXIST();
     let dir = this._lookup(path.dirname(filepath));
     let basename = path.basename(filepath);
@@ -150,13 +159,17 @@ module.exports = class YjsBackend {
       node.set(MTIME, mtimeMs);
       node.set(CONTENT, true); // must be truthy or else directory is in a "deleted" state
 
-      const path = new this.Y.Array();
-      path.push([[serializeID(dir._item.id), basename]]);
-      node.set(PATH, path);
+      const _path = new this.Y.Array();
+      _path.push([[serializeID(dir._item.id), basename]]);
+      node.set(PATH, _path);
       this._inodes.push([node]);
     }, 'mkdir');
   }
   rmdir(filepath) {
+    // Never allow deleting the root directory.
+    if (filepath === "/") {
+      throw new ENOTEMPTY();
+    }
     let dir = this._lookup(filepath);
     if (dir.get(TYPE) !== 'dir') throw new ENOTDIR();
     const ino = dir._item.id;
@@ -172,7 +185,11 @@ module.exports = class YjsBackend {
     if (dir.get(TYPE) !== 'dir') throw new ENOTDIR();
     return this._childrenOf(dir._item.id).map(node => ylast(node.get(PATH))[BASENAME]);
   }
-  writeStat(filepath, size, { mode }) {
+  writeFile(filepath, data, opts) {
+    let { mode, encoding = "utf8" } = opts;
+    if (encoding !== "utf8") {
+      throw new Error('Only "utf8" encoding is supported in writeFile');
+    }
     let node
     try {
       node = this._lookup(filepath);
@@ -183,31 +200,57 @@ module.exports = class YjsBackend {
     if (mode == null) {
       mode = 0o666;
     }
-    let dir = this._lookup(path.dirname(filepath));
-    let parentId = dir._item.id;
-    let basename = path.basename(filepath);
-    const mtimeMs = Date.now();
-
+    let newData;
+    if (typeof data === "string") {
+      // Use a Y.Text
+      newData = new this.Y.Text();
+      newData.insert(0, data);
+    } else if (data instanceof this.Y.AbstractType) {
+      newData = data;
+    } else {
+      // Yjs will fail if data.constructor !== Uint8Array
+      if (data.constructor.name === 'Buffer') {
+        newData = new Uint8Array(data.buffer);
+      } else {
+        newData = data;
+      }
+    }
     this._ydoc.transact(() => {
       if (!node) {
         node = new this.Y.Map();
         node.set(MODE, mode);
         node.set(TYPE, 'file');
-        node.set(MTIME, mtimeMs);
-        node.set(CONTENT, true); // set to truthy so file isn't in a "deleted" state
 
-        const path = new this.Y.Array();
-        path.push([[serializeID(parentId), basename]])
-        node.set(PATH, path);
+        const _path = new this.Y.Array();
+        let dir = this._lookup(path.dirname(filepath));
+        let parentId = dir._item.id;
+        let basename = path.basename(filepath);
+        _path.push([[serializeID(parentId), basename]])
+        node.set(PATH, _path);
         this._inodes.push([node]);
       } else {
-        node.set(MODE, mode);
+        if (mode !== node.get(MODE)) node.set(MODE, mode);
         node.set(TYPE, 'file');
-        node.set(MTIME, mtimeMs);
       }
+      const mtimeMs = Date.now();
+      node.set(MTIME, mtimeMs);
+      node.set(CONTENT, newData);
     }, 'writeFile');
-    const stat = this.stat(filepath);
-    return stat;
+  }
+  readFile(filepath, opts) {
+    let { encoding } = opts;
+    if (encoding && encoding !== "utf8") {
+      throw new Error('Only "utf8" encoding is supported in readFile');
+    }
+    let node = this._lookup(filepath, true);
+    let data = node.get(CONTENT);
+    if (data instanceof this.Y.Text) {
+      data = data.toString();
+      if (!encoding) {
+        data = encode(data);
+      }
+    }
+    return data;
   }
   unlink(filepath) {
     let node = this._lookup(filepath, false);
@@ -278,9 +321,9 @@ module.exports = class YjsBackend {
         node.set(MTIME, mtimeMs);
         node.set(CONTENT, target);
 
-        const path = new this.Y.Array();
-        path.push([[serializeID(parentId), basename]]);
-        node.set(PATH, path);
+        const _path = new this.Y.Array();
+        _path.push([[serializeID(parentId), basename]]);
+        node.set(PATH, _path);
         this._inodes.push([node]);
       } else {
         node.set(MODE, mode);
@@ -321,58 +364,6 @@ module.exports = class YjsBackend {
   }
   loadSuperblock() {
     return
-  }
-  readFileInode(inode) {
-    let data = this._getInode(inode).get(CONTENT);
-    if (data.constructor && data instanceof this.Y.Text) {
-      data = encode(data.toString());
-    }
-    return data;
-  }
-  writeFileInode(inode, data, rawdata) {
-    if (typeof rawdata === 'string') {
-      // Update existing Text
-      const oldData = this._getInode(inode).get(CONTENT);
-      if (oldData && oldData instanceof this.Y.Text) {
-        const oldString = oldData.toString();
-        const changes = diff(oldString, rawdata);
-        let idx = 0;
-        for (const [kind, string] of changes) {
-          switch (kind) {
-            case diff.EQUAL: {
-              idx += string.length;
-              break;
-            }
-            case diff.DELETE: {
-              oldData.delete(idx, string.length)
-              break;
-            }
-            case diff.INSERT: {
-              oldData.insert(idx, string);
-              idx += string.length;
-              break;
-            }
-          }
-        }
-        return;
-      } else {
-        // Use new Y.Text
-        data = new this.Y.Text();
-        data.insert(0, rawdata);
-      }
-    } else if (rawdata instanceof this.Y.AbstractType) {
-      data = rawdata;
-    } else {
-      // Yjs will fail if data.constructor !== Uint8Array
-      if (data.constructor.name === 'Buffer') {
-        data = new Uint8Array(data.buffer);
-      }
-    }
-    this._getInode(inode).set(CONTENT, data);
-    return;
-  }
-  unlinkInode(inode) {
-    return this._getInode(inode).set(CONTENT, false);
   }
   wipe() {
     return // TODO

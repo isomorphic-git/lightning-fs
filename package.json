@@ -13,16 +13,13 @@
   "scripts": {
     "test": "karma start --single-run",
     "build": "webpack",
-    "semantic-release": "semantic-release",
-    "serve": "serve"
+    "semantic-release": "semantic-release"
   },
   "dependencies": {
     "@isomorphic-git/idb-keyval": "3.3.2",
-    "fast-diff": "^1.2.0",
     "isomorphic-textencoder": "1.0.1",
     "just-debounce-it": "1.1.0",
-    "just-once": "1.1.0",
-    "nanoid": "^3.1.16"
+    "just-once": "1.1.0"
   },
   "peerDependencies": {
     "yjs": "^13.4.2"
@@ -44,9 +41,9 @@
     "prettier": "^1.15.3",
     "puppeteer": "^1.10.0",
     "semantic-release": "16.0.3",
-    "serve": "^11.3.2",
     "webpack": "^4.28.2",
-    "webpack-cli": "^3.1.2"
+    "webpack-cli": "^3.1.2",
+    "yjs": "^13.4.2"
   },
   "repository": {
     "type": "git",

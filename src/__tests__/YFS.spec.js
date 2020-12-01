@@ -3,10 +3,12 @@
 import FS from "../index.js";
 import * as Y from 'yjs';
 
+import YjsBackend from '../YjsBackend.js';
 import { find } from 'yjs/src/utils/StructStore';
 
 const ydoc = new Y.Doc();
-const fs = new FS("testfs-yjs", { wipe: true, yfs: { Y, ydoc, find } }).promises;
+const backend = new YjsBackend(Y, ydoc, find);
+const fs = new FS("testfs-yjs", { wipe: true, backend }).promises;
 
 const HELLO = new Uint8Array([72, 69, 76, 76, 79]);
 
