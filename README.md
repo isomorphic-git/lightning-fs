@@ -59,16 +59,17 @@ const fs = new FS("testfs")
 
 Options object:
 
-| Param           | Type [= default]   | Description                                                           |
-| --------------- | ------------------ | --------------------------------------------------------------------- |
-| `wipe`          | boolean = false    | Delete the database and start with an empty filesystem                |
-| `url`           | string = undefined | Let `readFile` requests fall back to an HTTP request to this base URL |
-| `urlauto`       | boolean = false    | Fall back to HTTP for every read of a missing file, even if unbacked  |
-| `fileDbName`    | string             | Customize the database name                                           |
-| `fileStoreName` | string             | Customize the store name                                              |
-| `lockDbName`    | string             | Customize the database name for the lock mutex                        |
-| `lockStoreName` | string             | Customize the store name for the lock mutex                           |
-| `defer`         | boolean = false    | If true, avoids mutex contention during initialization                |
+| Param           | Type [= default]   | Description                                                                                                                                                                                |
+| --------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `wipe`          | boolean = false    | Delete the database and start with an empty filesystem                                                                                                                                     |
+| `url`           | string = undefined | Let `readFile` requests fall back to an HTTP request to this base URL                                                                                                                      |
+| `urlauto`       | boolean = false    | Fall back to HTTP for every read of a missing file, even if unbacked                                                                                                                       |
+| `fileDbName`    | string             | Customize the database name                                                                                                                                                                |
+| `fileStoreName` | string             | Customize the store name                                                                                                                                                                   |
+| `lockDbName`    | string             | Customize the database name for the lock mutex                                                                                                                                             |
+| `lockStoreName` | string             | Customize the store name for the lock mutex                                                                                                                                                |
+| `defer`         | boolean = false    | If true, avoids mutex contention during initialization                                                                                                                                     |
+| `backend`       | IBackend           | If present, none of the other arguments (except `defer`) have any effect, and instead of using the normal LightningFS stuff, LightningFS acts as a wrapper around the provided custom backend. |
 
 #### Advanced usage
 
@@ -190,6 +191,66 @@ Returns the size of a file or directory in bytes.
 ### `fs.promises`
 
 All the same functions as above, but instead of passing a callback they return a promise.
+
+## Providing a custom `backend` (advanced usage)
+
+There are only two reasons I can think of that you would want to do this:
+
+1. The `fs` module is normally a singleton. LightningFS allows you to safely(ish) hotswap between various data sources by calling `init` multiple times with different options. (It keeps track of file system operations in flight and waits until there's an idle moment to do the switch.)
+
+2. LightningFS normalizes all the lovely variations of node's `fs` arguments:
+
+- `fs.writeFile('filename.txt', 'Hello', cb)`
+- `fs.writeFile('filename.txt', 'Hello', 'utf8', cb)`
+- `fs.writeFile('filename.txt', 'Hello', { encoding: 'utf8' }, cb)`
+- `fs.promises.writeFile('filename.txt', 'Hello')`
+- `fs.promises.writeFile('filename.txt', 'Hello', 'utf8')`
+- `fs.promises.writeFile('filename.txt', 'Hello', { encoding: 'utf8' })`
+
+And it normalizes filepaths. And will convert plain `StatLike` objects into `Stat` objects with methods like `isFile`, `isDirectory`, etc.
+
+If that fits your needs, then you can provide a `backend` option and LightningFS will use that. Implement as few/many methods as you need for your application to work.
+
+**Note:** If you use a custom backend, you are responsible for managing multi-threaded access - there are no magic mutexes included by default.
+
+```tsx
+
+type EncodingOpts = {
+  encoding?: 'utf8';
+}
+
+type StatLike = {
+  type: 'file' | 'dir' | 'symlink';
+  mode: number;
+  size: number;
+  ino: number | string | BigInt;
+  mtimeMs: number;
+  ctimeMs?: number;
+}
+
+interface IBackend {
+  // highly recommended - usually necessary for apps to work
+  readFile(filepath: string, opts: EncodingOpts): Awaited<Uint8Array | string>;
+  writeFile(filepath: string, data: Uint8Array | string, opts: EncodingOpts): void;
+  unlink(filepath: string, opts: any): void;
+  readdir(filepath: string, opts: any): Awaited<string[]>;
+  mkdir(filepath: string, opts: any): void;
+  rmdir(filepath: string, opts: any): void;
+
+  // recommended - often necessary for apps to work
+  stat(filepath: string, opts: any): Awaited<StatLike>;
+  lstat(filepath: string, opts: any): Awaited<StatLike>;
+
+  // suggested - used occasionally by apps
+  rename(oldFilepath: string, newFilepath: string): void;
+  readlink(filepath: string, opts: any): Awaited<string>;
+  symlink(target: string, filepath: string): void;
+
+  // bonus - not part of the standard `fs` module
+  backFile(filepath: string, opts: any): void;
+  du(filepath: string): Awaited<number>;
+}
+```
 
 ## License
 
