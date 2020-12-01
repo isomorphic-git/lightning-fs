@@ -1,10 +1,11 @@
 // jasmine.DEFAULT_TIMEOUT_INTERVAL = 20000
 
-import FS from "../index.js";
 import * as Y from 'yjs';
-
-import YjsBackend from '../YjsBackend.js';
 import { find } from 'yjs/src/utils/StructStore';
+
+import FS from "../../index.js";
+
+import YjsBackend from './YjsBackend.js';
 
 const ydoc = new Y.Doc();
 const backend = new YjsBackend(Y, ydoc, find);
@@ -18,7 +19,7 @@ if (!Promise.prototype.finally) {
   }
 }
 
-describe("YFS module", () => {
+describe("YjsBackend", () => {
   describe("mkdir", () => {
     it("root directory already exists", (done) => {
       fs.mkdir("/").catch(err => {

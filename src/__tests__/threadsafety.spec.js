@@ -27,30 +27,4 @@ describe("thread safety", () => {
       });
     });
   });
-
-  xit("launch a bunch of workers (YFS)", (done) => {
-    const fs = new FS("testfs-worker-yfs", { wipe: true, yfs: true }).promises;
-    let workers = []
-    let promises = []
-    let numWorkers = 5
-    fs.readdir('/').then(files => {
-      expect(files.length).toBe(0);
-      for (let i = 1; i <= numWorkers; i++) {
-        let promise = new Promise(resolve => {
-          let worker = new Worker('http://localhost:9876/base/src/__tests__/threadsafety-yfs.worker.js', {name: `worker_yfs_${i}`})
-          worker.onmessage = (e) => {
-            if (e.data && e.data.message === 'COMPLETE') resolve()
-          }
-          workers.push(worker)
-        })
-        promises.push(promise)
-      }
-      Promise.all(promises).then(() => {
-        fs.readdir('/').then(files => {
-          expect(files.length).toBe(5 * numWorkers)
-          done();
-        });
-      });
-    });
-  });
 });
