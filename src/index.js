@@ -1,6 +1,6 @@
 const once = require("just-once");
 
-const promises = require('./PromisifiedFS');
+const PromisifiedFS = require('./PromisifiedFS');
 
 function wrapCallback (opts, cb) {
   if (typeof opts === "function") {
@@ -13,7 +13,7 @@ function wrapCallback (opts, cb) {
 
 module.exports = class FS {
   constructor(...args) {
-    this.promises = promises(...args)
+    this.promises = new PromisifiedFS(...args)
     // Needed so things don't break if you destructure fs and pass individual functions around
     this.init = this.init.bind(this)
     this.readFile = this.readFile.bind(this)
