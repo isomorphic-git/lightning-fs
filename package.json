@@ -21,9 +21,6 @@
     "just-debounce-it": "1.1.0",
     "just-once": "1.1.0"
   },
-  "peerDependencies": {
-    "yjs": "^13.4.2"
-  },
   "devDependencies": {
     "@stoplight/path": "^1.3.2",
     "karma": "2.0.5",
