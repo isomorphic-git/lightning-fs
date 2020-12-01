@@ -83,6 +83,14 @@ module.exports = class PromisifiedFS {
       this._initPromiseResolve();
       this._initPromiseResolve = null;
     }
+    // The next comment starting with the "fs is initially activated when constructed"?
+    // That can create contention for the mutex if two threads try to init at the same time
+    // so I've added an option to disable that behavior.
+    if (!options.defer) {
+      // The fs is initially activated when constructed (in order to wipe/save the superblock)
+      // This is not awaited, because that would create a cycle.
+      this.stat('/')
+    }
   }
   async _gracefulShutdown () {
     if (this._operations.size > 0) {
