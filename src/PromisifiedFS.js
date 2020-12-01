@@ -40,31 +40,23 @@ function cleanParamsFilepathFilepath(oldFilepath, newFilepath, ...rest) {
   return [path.normalize(oldFilepath), path.normalize(newFilepath), ...rest];
 }
 
-module.exports = function promises(name, options) {
-  const pfs = new PromisifiedFS(options);
-  pfs.init = pfs.init.bind(pfs)
-  pfs.readFile = pfs._wrap(pfs.readFile, cleanParamsFilepathOpts, false)
-  pfs.writeFile = pfs._wrap(pfs.writeFile, cleanParamsFilepathDataOpts, true)
-  pfs.unlink = pfs._wrap(pfs.unlink, cleanParamsFilepathOpts, true)
-  pfs.readdir = pfs._wrap(pfs.readdir, cleanParamsFilepathOpts, false)
-  pfs.mkdir = pfs._wrap(pfs.mkdir, cleanParamsFilepathOpts, true)
-  pfs.rmdir = pfs._wrap(pfs.rmdir, cleanParamsFilepathOpts, true)
-  pfs.rename = pfs._wrap(pfs.rename, cleanParamsFilepathFilepath, true)
-  pfs.stat = pfs._wrap(pfs.stat, cleanParamsFilepathOpts, false)
-  pfs.lstat = pfs._wrap(pfs.lstat, cleanParamsFilepathOpts, false)
-  pfs.readlink = pfs._wrap(pfs.readlink, cleanParamsFilepathOpts, false)
-  pfs.symlink = pfs._wrap(pfs.symlink, cleanParamsFilepathFilepath, true)
-  pfs.backFile = pfs._wrap(pfs.backFile, cleanParamsFilepathOpts, true)
-  pfs.du = pfs._wrap(pfs.du, cleanParamsFilepathOpts, false);
+module.exports = class PromisifiedFS {
+  constructor(name, options = {}) {
+    this.init = this.init.bind(this)
+    this.readFile = this._wrap(this.readFile, cleanParamsFilepathOpts, false)
+    this.writeFile = this._wrap(this.writeFile, cleanParamsFilepathDataOpts, true)
+    this.unlink = this._wrap(this.unlink, cleanParamsFilepathOpts, true)
+    this.readdir = this._wrap(this.readdir, cleanParamsFilepathOpts, false)
+    this.mkdir = this._wrap(this.mkdir, cleanParamsFilepathOpts, true)
+    this.rmdir = this._wrap(this.rmdir, cleanParamsFilepathOpts, true)
+    this.rename = this._wrap(this.rename, cleanParamsFilepathFilepath, true)
+    this.stat = this._wrap(this.stat, cleanParamsFilepathOpts, false)
+    this.lstat = this._wrap(this.lstat, cleanParamsFilepathOpts, false)
+    this.readlink = this._wrap(this.readlink, cleanParamsFilepathOpts, false)
+    this.symlink = this._wrap(this.symlink, cleanParamsFilepathFilepath, true)
+    this.backFile = this._wrap(this.backFile, cleanParamsFilepathOpts, true)
+    this.du = this._wrap(this.du, cleanParamsFilepathOpts, false);
 
-  if (name) {
-    pfs.init(name, options)
-  }
-  return pfs;
-}
-
-class PromisifiedFS {
-  constructor(options = {}) {
     this._backend = options.backend || new DefaultBackend();
 
     this._deactivationPromise = null
@@ -72,6 +64,10 @@ class PromisifiedFS {
     this._activationPromise = null
 
     this._operations = new Set()
+
+    if (name) {
+      this.init(name, options)
+    }
   }
   async init (...args) {
     if (this._initPromiseResolve) await this._initPromise;
