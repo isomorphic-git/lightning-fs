@@ -82,7 +82,7 @@ module.exports = class DefaultBackend {
       await this._idb.saveSuperblock(this._cache._root);
     }
   }
-  async _writeStat(filepath, size, opts) {
+  _writeStat(filepath, size, opts) {
     let dirparts = path.split(path.dirname(filepath))
     let dir = dirparts.shift()
     for (let dirpart of dirparts) {
@@ -141,40 +141,40 @@ module.exports = class DefaultBackend {
       await this._idb.unlink(stat.ino)
     }
   }
-  async readdir(filepath, opts) {
+  readdir(filepath, opts) {
     return this._cache.readdir(filepath);
   }
-  async mkdir(filepath, opts) {
+  mkdir(filepath, opts) {
     const { mode = 0o777 } = opts;
-    await this._cache.mkdir(filepath, { mode });
+    this._cache.mkdir(filepath, { mode });
   }
-  async rmdir(filepath, opts) {
+  rmdir(filepath, opts) {
     // Never allow deleting the root directory.
     if (filepath === "/") {
       throw new ENOTEMPTY();
     }
     this._cache.rmdir(filepath);
   }
-  async rename(oldFilepath, newFilepath) {
+  rename(oldFilepath, newFilepath) {
     this._cache.rename(oldFilepath, newFilepath);
   }
-  async stat(filepath, opts) {
+  stat(filepath, opts) {
     return this._cache.stat(filepath);
   }
-  async lstat(filepath, opts) {
+  lstat(filepath, opts) {
     return this._cache.lstat(filepath);
   }
-  async readlink(filepath, opts) {
+  readlink(filepath, opts) {
     return this._cache.readlink(filepath);
   }
-  async symlink(target, filepath) {
+  symlink(target, filepath) {
     this._cache.symlink(target, filepath);
   }
   async backFile(filepath, opts) {
     let size = await this._http.sizeFile(filepath)
     await this._writeStat(filepath, size, opts)
   }
-  async du(filepath) {
+  du(filepath) {
     return this._cache.du(filepath);
   }
 }
