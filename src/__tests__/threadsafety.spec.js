@@ -1,9 +1,10 @@
 jasmine.DEFAULT_TIMEOUT_INTERVAL = 20000
 import FS from "../index.js";
 
+const fs = new FS("testfs-worker", { wipe: true }).promises;
+
 describe("thread safety", () => {
   it("launch a bunch of workers", (done) => {
-    const fs = new FS("testfs-worker", { wipe: true }).promises;
     let workers = []
     let promises = []
     let numWorkers = 5
