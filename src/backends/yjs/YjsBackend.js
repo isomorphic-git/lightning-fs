@@ -2,7 +2,6 @@ const { encode } = require("isomorphic-textencoder");
 const path = require("@stoplight/path");
 
 const { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY } = require("./errors.js");
-const { bton, ntob } = require("./radix64.js");
 
 const TYPE = 't';
 const MTIME = 'm';
@@ -17,15 +16,19 @@ function ID (client, clock) {
   this.clock = clock;
 }
 
+// https://www.ecma-international.org/ecma-262/#sec-number.prototype.tostring
+const MAX_RADIX = 36;
+
 function serializeID (id) {
-  return `${ntob(id.client)}-${ntob(id.clock)}`;
+  // Numbers are encoded in base 36 to save space.
+  return `${id.client.toString(MAX_RADIX)}-${id.clock.toString(MAX_RADIX)}`;
 }
 
 function parseID (arr) {
   if (!arr) return arr;
   const id = arr.indexOf('-');
-  const client = bton(arr.slice(0, id));
-  const clock = bton(arr.slice(id + 1));
+  const client = parseInt(arr.slice(0, id), MAX_RADIX);
+  const clock = parseInt(arr.slice(id + 1), MAX_RADIX);
   return new ID(client, clock);
 }
 
