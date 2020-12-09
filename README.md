@@ -251,6 +251,10 @@ interface IBackend {
   // bonus - not part of the standard `fs` module
   backFile(filepath: string, opts: any): void;
   du(filepath: string): Awaited<number>;
+
+  // lifecycle - useful if your backend needs setup and teardown
+  init?(name: string, opts: any): Awaited<void>;
+  destroy?(): Awaited<void>; // called before hotswapping backends
 }
 ```
 

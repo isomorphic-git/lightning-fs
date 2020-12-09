@@ -57,8 +57,6 @@ module.exports = class PromisifiedFS {
     this.backFile = this._wrap(this.backFile, cleanParamsFilepathOpts, true)
     this.du = this._wrap(this.du, cleanParamsFilepathOpts, false);
 
-    this._backend = options.backend || new DefaultBackend();
-
     this._deactivationPromise = null
     this._deactivationTimeout = null
     this._activationPromise = null
@@ -77,7 +75,13 @@ module.exports = class PromisifiedFS {
   async _init (name, options = {}) {
     await this._gracefulShutdown();
 
-    await this._backend.init(name, options);
+    if (this._backend && this._backend.destroy) {
+      await this._backend.destroy();
+    }
+    this._backend = options.backend || new DefaultBackend();
+    if (this._backend.init) {
+      await this._backend.init(name, options);
+    }
 
     if (this._initPromiseResolve) {
       this._initPromiseResolve();
