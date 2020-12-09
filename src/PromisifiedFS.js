@@ -74,6 +74,7 @@ module.exports = class PromisifiedFS {
   }
   async _init (name, options = {}) {
     await this._gracefulShutdown();
+    if (this._activationPromise) await this._deactivate()
 
     if (this._backend && this._backend.destroy) {
       await this._backend.destroy();
@@ -134,12 +135,17 @@ module.exports = class PromisifiedFS {
     }
     if (this._deactivationPromise) await this._deactivationPromise
     this._deactivationPromise = null
-    if (!this._activationPromise) this._activationPromise = this._backend.activate();
+    if (!this._activationPromise) {
+      this._activationPromise = this._backend.activate ? this._backend.activate() : Promise.resolve();
+    }
     await this._activationPromise
   }
   async _deactivate() {
     if (this._activationPromise) await this._activationPromise
-    if (!this._deactivationPromise) this._deactivationPromise = this._backend.deactivate();
+
+    if (!this._deactivationPromise) {
+      this._deactivationPromise = this._backend.deactivate ? this._backend.deactivate() : Promise.resolve();
+    }
     this._activationPromise = null
     if (this._gracefulShutdownResolve) this._gracefulShutdownResolve()
     return this._deactivationPromise

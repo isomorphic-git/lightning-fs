@@ -253,7 +253,9 @@ interface IBackend {
   du(filepath: string): Awaited<number>;
 
   // lifecycle - useful if your backend needs setup and teardown
-  init?(name: string, opts: any): Awaited<void>;
+  init?(name: string, opts: any): Awaited<void>; // passes initialization options
+  activate?(): Awaited<void>; // called before fs operations are started
+  deactivate?(): Awaited<void>; // called after fs has been idle for a while
   destroy?(): Awaited<void>; // called before hotswapping backends
 }
 ```
