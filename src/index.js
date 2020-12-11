@@ -31,7 +31,7 @@ module.exports = class FS {
     this.du = this.du.bind(this)
   }
   init(name, options) {
-    this.promises.init(name, options)
+    return this.promises.init(name, options)
   }
   readFile(filepath, opts, cb) {
     const [resolve, reject] = wrapCallback(opts, cb);
