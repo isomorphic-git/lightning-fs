@@ -61,6 +61,7 @@ Options object:
 
 | Param           | Type [= default]   | Description                                                           |
 | --------------- | ------------------ | --------------------------------------------------------------------- |
+| `backend`       | string = "idb"     | Defults to IndexedDb Store.This is the only built-in backend currently |
 | `wipe`          | boolean = false    | Delete the database and start with an empty filesystem                |
 | `url`           | string = undefined | Let `readFile` requests fall back to an HTTP request to this base URL |
 | `urlauto`       | boolean = false    | Fall back to HTTP for every read of a missing file, even if unbacked  |
@@ -189,6 +190,43 @@ Returns the size of a file or directory in bytes.
 ### `fs.promises`
 
 All the same functions as above, but instead of passing a callback they return a promise.
+
+## Storage Backend
+
+You can create your own storage backend if the default idb storage backend does not meet your needs.
+
+You should implement these methods in your backend:
+
+```ts
+export default class YourBackend {
+  // new FS(name, options?)
+  constructor(name: string, options?) {}
+  // save the superblock to your backend
+  async saveSuperblock(superblock: Map) {}
+  // load the superblock from your backend
+  async loadSuperblock(): Map {}
+  async readFile(inode: string): Buffer {}
+  async writeFile(inode: string, data: Uint8Array) {}
+  // remove inode file
+  async unlink(inode: string) {}
+  // clean all data
+  async wipe()
+  // close backend
+  async close()
+}
+```
+
+See the `errors.js` for the error code to raise.
+
+Then register it to the `FS`
+
+```ts
+import FS from '@isomorphic-git/lightning-fs'
+FS.register('YourBackend', YourBackend)
+
+// now you can use your backend:
+const fs = new FS('your-fs-name', {backend: 'YourBackend', ...yourBackendOptions})
+```
 
 ## License
 
