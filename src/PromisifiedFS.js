@@ -79,21 +79,22 @@ module.exports = class PromisifiedFS {
     this._initPromise = this._init(...args)
     return this._initPromise
   }
-  async _init (name, {
-    wipe,
-    url,
-    urlauto,
-    database,
-    fileDbName = name,
-    fileStoreName = name + "_files",
-    lockDbName = name + "_lock",
-    lockStoreName = name + "_lock",
-  } = {}) {
+  async _init (name, options = {}) {
     await this._gracefulShutdown()
+    const {
+      wipe,
+      url,
+      urlauto,
+      backend,
+      fileDbName = name,
+      fileStoreName = name + "_files",
+      lockDbName = name + "_lock",
+      lockStoreName = name + "_lock",
+    } = options
     this._name = name
-    let Backend = (this.backends && this.backends[database]) || IdbBackend;
-    this._idb = new Backend(fileDbName, {storename: fileStoreName});
-    this._mutex = navigator.locks ? new Mutex2(name) : new Mutex(lockDbName, lockStoreName);
+    let Backend = (this.backends && this.backends[backend]) || IdbBackend;
+    this._idb = new Backend(fileDbName, {...options, storename: fileStoreName});
+    this._mutex = typeof navigator !== 'undefined' && navigator.locks ? new Mutex2(name) : new Mutex(lockDbName, lockStoreName);
     this._cache = new CacheFS(name);
     this._opts = { wipe, url };
     this._needsWipe = !!wipe;
