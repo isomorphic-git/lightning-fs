@@ -18,28 +18,28 @@
   "dependencies": {
     "@isomorphic-git/idb-keyval": "3.3.2",
     "isomorphic-textencoder": "1.0.1",
-    "just-debounce-it": "1.1.0",
-    "just-once": "1.1.0"
+    "just-debounce-it": "1.5.0",
+    "just-once": "1.1.1"
   },
   "devDependencies": {
-    "karma": "2.0.5",
-    "karma-browserstack-launcher": "^1.5.1",
+    "karma": "6.3.4",
+    "karma-browserstack-launcher": "^1.6.0",
     "karma-chrome-launcher": "3.1.0",
     "karma-edge-launcher": "0.4.2",
     "karma-fail-fast-reporter": "1.0.5",
-    "karma-firefox-launcher": "1.2.0",
+    "karma-firefox-launcher": "2.1.1",
     "karma-ie-launcher": "1.0.0",
-    "karma-jasmine": "2.0.1",
-    "karma-junit-reporter": "1.2.0",
+    "karma-jasmine": "4.0.1",
+    "karma-junit-reporter": "2.0.1",
     "karma-safari-launcher": "1.0.0",
-    "karma-sauce-launcher": "1.2.0",
+    "karma-sauce-launcher": "4.3.6",
     "karma-verbose-reporter": "0.0.6",
-    "karma-webpack": "4.0.2",
-    "prettier": "^1.15.3",
-    "puppeteer": "^1.10.0",
-    "semantic-release": "16.0.3",
-    "webpack": "^4.28.2",
-    "webpack-cli": "^3.1.2"
+    "karma-webpack": "5.0.0",
+    "prettier": "^2.3.2",
+    "puppeteer": "^10.1.0",
+    "semantic-release": "17.4.4",
+    "webpack": "^5.42.0",
+    "webpack-cli": "^4.7.2"
   },
   "repository": {
     "type": "git",
