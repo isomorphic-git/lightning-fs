@@ -77,42 +77,39 @@ function cleanParamsFilepathFilepath(oldFilepath, newFilepath, ...rest) {
 
 module.exports = class PromisifiedFS {
   constructor(name, options = {}) {
-    this.init = this.init.bind(this);
-    this.readFile = this._wrap(this.readFile, cleanParamsFilepathOpts, false);
-    this.readFileBulk = this._wrap(this.readFileBulk, cleanParamsFilepathsOpts, true);
-    this.writeFile = this._wrap(this.writeFile, cleanParamsFilepathDataOpts, true);
-    this.writeFileBulk = this._wrap(this.writeFileBulk, cleanParamsFilesOpts, true);
-    this.unlink = this._wrap(this.unlink, cleanParamsFilepathOpts, true);
-    this.unlinkBulk = this._wrap(this.unlinkBulk, cleanParamsFilepathsOpts, true);
-    this.readdir = this._wrap(this.readdir, cleanParamsFilepathOpts, false);
-    this.mkdir = this._wrap(this.mkdir, cleanParamsFilepathOpts, true);
-    this.rmdir = this._wrap(this.rmdir, cleanParamsFilepathOpts, true);
-    this.rename = this._wrap(this.rename, cleanParamsFilepathFilepath, true);
-    this.stat = this._wrap(this.stat, cleanParamsFilepathOpts, false);
-    this.lstat = this._wrap(this.lstat, cleanParamsFilepathOpts, false);
-    this.readlink = this._wrap(this.readlink, cleanParamsFilepathOpts, false);
-    this.symlink = this._wrap(this.symlink, cleanParamsFilepathFilepath, true);
-    this.backFile = this._wrap(this.backFile, cleanParamsFilepathOpts, true);
+    this.init = this.init.bind(this)
+    this.readFile = this._wrap(this.readFile, cleanParamsFilepathOpts, false)
+    this.writeFile = this._wrap(this.writeFile, cleanParamsFilepathDataOpts, true)
+    this.unlink = this._wrap(this.unlink, cleanParamsFilepathOpts, true)
+    this.readdir = this._wrap(this.readdir, cleanParamsFilepathOpts, false)
+    this.mkdir = this._wrap(this.mkdir, cleanParamsFilepathOpts, true)
+    this.rmdir = this._wrap(this.rmdir, cleanParamsFilepathOpts, true)
+    this.rename = this._wrap(this.rename, cleanParamsFilepathFilepath, true)
+    this.stat = this._wrap(this.stat, cleanParamsFilepathOpts, false)
+    this.lstat = this._wrap(this.lstat, cleanParamsFilepathOpts, false)
+    this.readlink = this._wrap(this.readlink, cleanParamsFilepathOpts, false)
+    this.symlink = this._wrap(this.symlink, cleanParamsFilepathFilepath, true)
+    this.backFile = this._wrap(this.backFile, cleanParamsFilepathOpts, true)
     this.du = this._wrap(this.du, cleanParamsFilepathOpts, false);
 
-    this._deactivationPromise = null;
-    this._deactivationTimeout = null;
-    this._activationPromise = null;
+    this._deactivationPromise = null
+    this._deactivationTimeout = null
+    this._activationPromise = null
 
-    this._operations = new Set();
+    this._operations = new Set()
 
     if (name) {
-      this.init(name, options);
+      this.init(name, options)
     }
   }
-  async init(...args) {
+  async init (...args) {
     if (this._initPromiseResolve) await this._initPromise;
-    this._initPromise = this._init(...args);
-    return this._initPromise;
+    this._initPromise = this._init(...args)
+    return this._initPromise
   }
-  async _init(name, options = {}) {
+  async _init (name, options = {}) {
     await this._gracefulShutdown();
-    if (this._activationPromise) await this._deactivate();
+    if (this._activationPromise) await this._deactivate()
 
     if (this._backend && this._backend.destroy) {
       await this._backend.destroy();
@@ -132,62 +129,61 @@ module.exports = class PromisifiedFS {
     if (!options.defer) {
       // The fs is initially activated when constructed (in order to wipe/save the superblock)
       // This is not awaited, because that would create a cycle.
-      this.stat("/");
+      this.stat('/')
     }
   }
-  async _gracefulShutdown() {
+  async _gracefulShutdown () {
     if (this._operations.size > 0) {
-      this._isShuttingDown = true;
-      await new Promise(resolve => (this._gracefulShutdownResolve = resolve));
-      this._isShuttingDown = false;
-      this._gracefulShutdownResolve = null;
+      this._isShuttingDown = true
+      await new Promise(resolve => this._gracefulShutdownResolve = resolve);
+      this._isShuttingDown = false
+      this._gracefulShutdownResolve = null
     }
   }
-  _wrap(fn, paramCleaner, mutating) {
+  _wrap (fn, paramCleaner, mutating) {
     return async (...args) => {
-      args = paramCleaner(...args);
+      args = paramCleaner(...args)
       let op = {
         name: fn.name,
         args,
-      };
-      this._operations.add(op);
+      }
+      this._operations.add(op)
       try {
-        await this._activate();
-        return await fn.apply(this, args);
+        await this._activate()
+        return await fn.apply(this, args)
       } finally {
-        this._operations.delete(op);
-        if (mutating) this._backend.saveSuperblock(); // this is debounced
+        this._operations.delete(op)
+        if (mutating) this._backend.saveSuperblock() // this is debounced
         if (this._operations.size === 0) {
-          if (!this._deactivationTimeout) clearTimeout(this._deactivationTimeout);
-          this._deactivationTimeout = setTimeout(this._deactivate.bind(this), 500);
+          if (!this._deactivationTimeout) clearTimeout(this._deactivationTimeout)
+          this._deactivationTimeout = setTimeout(this._deactivate.bind(this), 500)
         }
       }
-    };
+    }
   }
   async _activate() {
-    if (!this._initPromise)
-      console.warn(new Error(`Attempted to use LightningFS ${this._name} before it was initialized.`));
-    await this._initPromise;
+    if (!this._initPromise) console.warn(new Error(`Attempted to use LightningFS ${this._name} before it was initialized.`))
+    await this._initPromise
     if (this._deactivationTimeout) {
-      clearTimeout(this._deactivationTimeout);
-      this._deactivationTimeout = null;
+      clearTimeout(this._deactivationTimeout)
+      this._deactivationTimeout = null
     }
-    if (this._deactivationPromise) await this._deactivationPromise;
-    this._deactivationPromise = null;
+    if (this._deactivationPromise) await this._deactivationPromise
+    this._deactivationPromise = null
     if (!this._activationPromise) {
       this._activationPromise = this._backend.activate ? this._backend.activate() : Promise.resolve();
     }
-    await this._activationPromise;
+    await this._activationPromise
   }
   async _deactivate() {
-    if (this._activationPromise) await this._activationPromise;
+    if (this._activationPromise) await this._activationPromise
 
     if (!this._deactivationPromise) {
       this._deactivationPromise = this._backend.deactivate ? this._backend.deactivate() : Promise.resolve();
     }
-    this._activationPromise = null;
-    if (this._gracefulShutdownResolve) this._gracefulShutdownResolve();
-    return this._deactivationPromise;
+    this._activationPromise = null
+    if (this._gracefulShutdownResolve) this._gracefulShutdownResolve()
+    return this._deactivationPromise
   }
   async readFile(filepath, opts) {
     return this._backend.readFile(filepath, opts);
@@ -197,7 +193,7 @@ module.exports = class PromisifiedFS {
   }
   async writeFile(filepath, data, opts) {
     await this._backend.writeFile(filepath, data, opts);
-    return null;
+    return null
   }
   async writeFileBulk(files, opts) {
     await this._backend.writeFileBulk(files, opts);
@@ -205,7 +201,7 @@ module.exports = class PromisifiedFS {
   }
   async unlink(filepath, opts) {
     await this._backend.unlink(filepath, opts);
-    return null;
+    return null
   }
   async unlinkBulk(filepath, opts) {
     await this._backend.unlinkBulk(filepath, opts);
@@ -216,7 +212,7 @@ module.exports = class PromisifiedFS {
   }
   async mkdir(filepath, opts) {
     await this._backend.mkdir(filepath, opts);
-    return null;
+    return null
   }
   async rmdir(filepath, opts) {
     await this._backend.rmdir(filepath, opts);
@@ -243,9 +239,9 @@ module.exports = class PromisifiedFS {
   }
   async backFile(filepath, opts) {
     await this._backend.backFile(filepath, opts);
-    return null;
+    return null
   }
   async du(filepath) {
     return this._backend.du(filepath);
   }
-};
+}
