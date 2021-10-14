@@ -11,7 +11,8 @@ const Mutex2 = require("./Mutex2.js");
 const path = require("./path.js");
 
 module.exports = class DefaultBackend {
-  constructor() {
+  constructor({ idbBackendDelegate = undefined }) {
+    this.idbBackendDelegate = idbBackendDelegate;
     this.saveSuperblock = debounce(() => {
       this._saveSuperblock();
     }, 500);
@@ -24,9 +25,10 @@ module.exports = class DefaultBackend {
     fileStoreName = name + "_files",
     lockDbName = name + "_lock",
     lockStoreName = name + "_lock",
+    idbBackend = this.idbBackendDelegate ? this.idbBackendDelegate(fileDbName, fileStoreName) : new IdbBackend(fileDbName, fileStoreName)
   } = {}) {
     this._name = name
-    this._idb = new IdbBackend(fileDbName, fileStoreName);
+    this._idb = idbBackend;
     this._mutex = navigator.locks ? new Mutex2(name) : new Mutex(lockDbName, lockStoreName);
     this._cache = new CacheFS(name);
     this._opts = { wipe, url };
@@ -122,6 +124,26 @@ module.exports = class DefaultBackend {
     }
     if (!stat) throw new ENOENT(filepath)
     return data;
+  }
+  async writeFileBulk(files, opts) {
+    if (!this._idb.writeFileBulk) {
+      throw new Error("Current IndexedDB backend doesn't support bulk operations.");
+    }
+
+    const { mode, encoding = "utf8" } = opts;
+    if (encoding !== "utf8") {
+      throw new Error('Only "utf8" encoding is supported in writeFileBulk');
+    }
+
+    const inoBulk = [];
+    const dataBulk = [];
+    for (const [filepath, data] of files) {
+      const stat = this._cache.writeStat(filepath, data.byteLength, { mode });
+      inoBulk.push(stat.ino);
+      dataBulk.push(typeof data === "string" ? encode(data) : data);
+    }
+
+    await this._idb.writeFileBulk(inoBulk, dataBulk)
   }
   async writeFile(filepath, data, opts) {
     const { mode, encoding = "utf8" } = opts;

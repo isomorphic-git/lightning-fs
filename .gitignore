@@ -3,3 +3,5 @@ dist
 coverage
 junit
 *-0.0.0-development.tgz
+.DS_Store
+.idea
