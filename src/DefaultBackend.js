@@ -125,6 +125,47 @@ module.exports = class DefaultBackend {
     if (!stat) throw new ENOENT(filepath)
     return data;
   }
+  async readFileBulk(filepaths, opts) {
+    const { encoding } = opts;
+    if (encoding && encoding !== "utf8") {
+      throw new Error('Only "utf8" encoding is supported in readFile');
+    }
+
+    if (this._http) {
+      throw new Error("Bulk-reading is not supported through HTTP");
+    }
+
+    if (!this._idb.readFileBulk) {
+      throw new Error("Current IndexedDB backend doesn't support bulk-reading operations.");
+    }
+
+    const inoBulk = [];
+    const enoentBulk = [];
+    for (const filepath of filepaths) {
+      const stat = this._cache.stat(filepath);
+      if (stat) {
+        inoBulk.push(stat.ino);
+      } else {
+        enoentBulk.push(filepath);
+      }
+    }
+
+    if (enoentBulk.length > 0) {
+      throw new ENOENT(enoentBulk.join(", "));
+    }
+
+    const dataBulk = await this._idb.readFileBulk(inoBulk);
+    if (dataBulk.length !== filepaths.length) {
+      throw new Error("Unexpected error during bulk-read");
+    }
+
+    const fileBulk = [];
+    for (let i = 0; i < dataBulk.length; i++) {
+      fileBulk[i] = [filepaths[i], dataBulk[i]];
+    }
+
+    return fileBulk;
+  }
   async writeFileBulk(files, opts) {
     if (!this._idb.writeFileBulk) {
       throw new Error("Current IndexedDB backend doesn't support bulk operations.");

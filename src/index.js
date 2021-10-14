@@ -17,6 +17,7 @@ module.exports = class FS {
     // Needed so things don't break if you destructure fs and pass individual functions around
     this.init = this.init.bind(this)
     this.readFile = this.readFile.bind(this)
+    this.readFileBulk = this.readFileBulk.bind(this)
     this.writeFile = this.writeFile.bind(this)
     this.writeFileBulk = this.writeFileBulk.bind(this)
     this.unlink = this.unlink.bind(this)
@@ -38,13 +39,17 @@ module.exports = class FS {
     const [resolve, reject] = wrapCallback(opts, cb);
     this.promises.readFile(filepath, opts).then(resolve).catch(reject)
   }
+  readFileBulk(filepaths, opts, cb) {
+    const [resolve, reject] = wrapCallback(opts, cb);
+    this.promises.readFileBulk(filepaths, opts).then(resolve).catch(reject);
+  }
   writeFile(filepath, data, opts, cb) {
     const [resolve, reject] = wrapCallback(opts, cb);
     this.promises.writeFile(filepath, data, opts).then(resolve).catch(reject);
   }
-  writeFileBulk(files, opts, cb) {
+  writeFileBulk(filepaths, opts, cb) {
     const [resolve, reject] = wrapCallback(opts, cb);
-    this.promises.writeFileBulk(files, opts).then(resolve).catch(reject);
+    this.promises.writeFileBulk(filepaths, opts).then(resolve).catch(reject);
   }
   unlink(filepath, opts, cb) {
     const [resolve, reject] = wrapCallback(opts, cb);
