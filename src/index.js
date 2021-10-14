@@ -21,6 +21,7 @@ module.exports = class FS {
     this.writeFile = this.writeFile.bind(this)
     this.writeFileBulk = this.writeFileBulk.bind(this)
     this.unlink = this.unlink.bind(this)
+    this.unlinkBulk = this.unlinkBulk.bind(this)
     this.readdir = this.readdir.bind(this)
     this.mkdir = this.mkdir.bind(this)
     this.rmdir = this.rmdir.bind(this)
@@ -54,6 +55,10 @@ module.exports = class FS {
   unlink(filepath, opts, cb) {
     const [resolve, reject] = wrapCallback(opts, cb);
     this.promises.unlink(filepath, opts).then(resolve).catch(reject);
+  }
+  unlinkBulk(filepaths, opts, cb) {
+    const [resolve, reject] = wrapCallback(opts, cb);
+    this.promises.unlink(filepaths, opts).then(resolve).catch(reject);
   }
   readdir(filepath, opts, cb) {
     const [resolve, reject] = wrapCallback(opts, cb);

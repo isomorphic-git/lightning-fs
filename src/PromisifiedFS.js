@@ -83,6 +83,7 @@ module.exports = class PromisifiedFS {
     this.writeFile = this._wrap(this.writeFile, cleanParamsFilepathDataOpts, true);
     this.writeFileBulk = this._wrap(this.writeFileBulk, cleanParamsFilesOpts, true);
     this.unlink = this._wrap(this.unlink, cleanParamsFilepathOpts, true);
+    this.unlinkBulk = this._wrap(this.unlinkBulk, cleanParamsFilepathsOpts, true);
     this.readdir = this._wrap(this.readdir, cleanParamsFilepathOpts, false);
     this.mkdir = this._wrap(this.mkdir, cleanParamsFilepathOpts, true);
     this.rmdir = this._wrap(this.rmdir, cleanParamsFilepathOpts, true);
@@ -204,6 +205,10 @@ module.exports = class PromisifiedFS {
   }
   async unlink(filepath, opts) {
     await this._backend.unlink(filepath, opts);
+    return null;
+  }
+  async unlinkBulk(filepath, opts) {
+    await this._backend.unlinkBulk(filepath, opts);
     return null;
   }
   async readdir(filepath, opts) {

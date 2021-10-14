@@ -166,9 +166,20 @@ module.exports = class DefaultBackend {
 
     return fileBulk;
   }
+  async writeFile(filepath, data, opts) {
+    const { mode, encoding = "utf8" } = opts;
+    if (typeof data === "string") {
+      if (encoding !== "utf8") {
+        throw new Error('Only "utf8" encoding is supported in writeFile');
+      }
+      data = encode(data);
+    }
+    const stat = await this._cache.writeStat(filepath, data.byteLength, { mode });
+    await this._idb.writeFile(stat.ino, data)
+  }
   async writeFileBulk(files, opts) {
     if (!this._idb.writeFileBulk) {
-      throw new Error("Current IndexedDB backend doesn't support bulk operations.");
+      throw new Error("Current IndexedDB backend doesn't support bulk-writing operations.");
     }
 
     const { mode, encoding = "utf8" } = opts;
@@ -186,23 +197,27 @@ module.exports = class DefaultBackend {
 
     await this._idb.writeFileBulk(inoBulk, dataBulk)
   }
-  async writeFile(filepath, data, opts) {
-    const { mode, encoding = "utf8" } = opts;
-    if (typeof data === "string") {
-      if (encoding !== "utf8") {
-        throw new Error('Only "utf8" encoding is supported in writeFile');
-      }
-      data = encode(data);
-    }
-    const stat = await this._cache.writeStat(filepath, data.byteLength, { mode });
-    await this._idb.writeFile(stat.ino, data)
-  }
   async unlink(filepath, opts) {
     const stat = this._cache.lstat(filepath);
     this._cache.unlink(filepath);
     if (stat.type !== 'symlink') {
       await this._idb.unlink(stat.ino)
     }
+  }
+  async unlinkBulk(filepaths, opts) {
+    if (!this._idb.unlinkBulk) {
+      throw new Error("Current IndexedDB backend doesn't support bulk-unlinking operations.");
+    }
+
+    const inoBulk = [];
+    for (const filepath of filepaths) {
+      const stat = this._cache.lstat(filepath);
+      this._cache.unlink(filepath);
+      if (stat.type !== "symlink") {
+        inoBulk.push(stat.ino);
+      }
+    }
+    await this._idb.unlinkBulk(inoBulk);
   }
   readdir(filepath, opts) {
     return this._cache.readdir(filepath);
