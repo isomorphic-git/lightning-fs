@@ -47,7 +47,11 @@ declare module '@isomorphic-git/lightning-fs' {
 
     writeFile(filepath: string, data: Uint8Array | string, options: FS.WriteFileOptions | undefined | string, cb: (err: Error) => void): void
 
+    writeFileBulk?: (files: [filePath: string, data: Uint8Array][], options: FS.WriteFileOptions | undefined | string, cb: (err: Error) => void) => void;
+
     readFile(filepath: string, options: FS.ReadFileOptions | undefined | string, cb: (err: Error, data: Uint8Array | string) => void): void
+
+    readFileBulk?: (filepaths: string[], options: FS.ReadFileOptions | undefined | string, cb: (err: Error, data: Uint8Array | string) => void) => [filePath: string, data: Uint8Array][]
 
     /**
      * Delete a file
@@ -56,6 +60,8 @@ declare module '@isomorphic-git/lightning-fs' {
      * @param cb
      */
     unlink(filepath: string, options: undefined, cb: (err: Error) => void): void
+
+    unlinkBulk?: (filepaths: string[], options: undefined, cb: (err: Error) => void) => void
 
     /**
      * Rename a file or directory
@@ -149,7 +155,11 @@ declare module '@isomorphic-git/lightning-fs' {
 
       writeFile(filepath: string, data: Uint8Array | string, options?: FS.WriteFileOptions | string): Promise<void>
 
+      writeFileBulk?: (files: [filePath: string, data: Uint8Array][], options?: FS.WriteFileOptions) => Promise<void>;
+
       readFile(filepath: string, options?: FS.ReadFileOptions | string): Promise<Uint8Array | string>
+
+      readFileBulk?: (filepaths: string[], options?: FS.ReadFileOptions) => Promise<[filePath: string, data: Uint8Array][]>;
 
       /**
        * Delete a file
@@ -157,6 +167,8 @@ declare module '@isomorphic-git/lightning-fs' {
        * @param options
        */
       unlink(filepath: string, options?: undefined): Promise<void>
+
+      unlinkBulk?: (filepaths: string[]) => Promise<void>;
 
       /**
        * Rename a file or directory
