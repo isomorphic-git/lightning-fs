@@ -11,8 +11,8 @@ const Mutex2 = require("./Mutex2.js");
 const path = require("./path.js");
 
 module.exports = class DefaultBackend {
-  constructor({ idbBackendDelegate = undefined }) {
-    this.idbBackendDelegate = idbBackendDelegate;
+  constructor(args) {
+    this._idbBackendDelegate = args ? args.idbBackendDelegate : undefined;
     this.saveSuperblock = debounce(() => {
       this._saveSuperblock();
     }, 500);
@@ -25,7 +25,9 @@ module.exports = class DefaultBackend {
     fileStoreName = name + "_files",
     lockDbName = name + "_lock",
     lockStoreName = name + "_lock",
-    idbBackend = new IdbBackend(fileDbName, fileStoreName)
+    idbBackend = this._idbBackendDelegate
+      ? this._idbBackendDelegate(fileDbName, fileStoreName)
+      : new IdbBackend(fileDbName, fileStoreName)
   } = {}) {
     this._name = name
     this._idb = idbBackend;

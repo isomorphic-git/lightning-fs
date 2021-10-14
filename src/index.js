@@ -58,7 +58,7 @@ module.exports = class FS {
   }
   unlinkBulk(filepaths, opts, cb) {
     const [resolve, reject] = wrapCallback(opts, cb);
-    this.promises.unlink(filepaths, opts).then(resolve).catch(reject);
+    this.promises.unlinkBulk(filepaths, opts).then(resolve).catch(reject);
   }
   readdir(filepath, opts, cb) {
     const [resolve, reject] = wrapCallback(opts, cb);

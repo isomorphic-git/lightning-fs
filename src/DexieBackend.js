@@ -1,4 +1,4 @@
-const Dexie = require("dexie");
+const { Dexie } = require("dexie");
 
 module.exports = class DexieBackend {
   constructor(dbname, storename) {
@@ -10,40 +10,58 @@ module.exports = class DexieBackend {
   }
   async saveSuperblock(superblock) {
     await this._dexie.open();
-    return this._dexie[this._storename].put(superblock, "!root");
+    return this._dexie.transaction("rw", this._dexie[this._storename], async () => {
+      return this._dexie[this._storename].put(superblock, "!root");
+    });
   }
   async loadSuperblock() {
     await this._dexie.open();
-    return this._dexie[this._storename].get("!root");
+    return this._dexie.transaction("rw", this._dexie[this._storename], async () => {
+      return this._dexie[this._storename].get("!root");
+    });
   }
   async readFile(inode) {
     await this._dexie.open();
-    return this._dexie[this._storename].get(inode);
+    return this._dexie.transaction("rw", this._dexie[this._storename], async () => {
+      return this._dexie[this._storename].get(inode);
+    });
   }
   async readFileBulk(inodeBulk) {
     await this._dexie.open();
-    return this._dexie[this._storename].bulkGet(inodeBulk);
+    return this._dexie.transaction("rw", this._dexie[this._storename], async () => {
+      return this._dexie[this._storename].bulkGet(inodeBulk);
+    });
   }
   async writeFile(inode, data) {
     await this._dexie.open();
-    return this._dexie[this._storename].put(data, inode);
+    return this._dexie.transaction("rw", this._dexie[this._storename], async () => {
+      return this._dexie[this._storename].put(data, inode);
+    });
   }
   async writeFileBulk(inodeBulk, dataBulk) {
     await this._dexie.open();
-    await this._dexie[this._storename].bulkPut(dataBulk, inodeBulk);
+    return this._dexie.transaction("rw", this._dexie[this._storename], async () => {
+      return this._dexie[this._storename].bulkPut(dataBulk, inodeBulk);
+    });
   }
   async unlink(inode) {
     await this._dexie.open();
-    await this._dexie[this._storename].delete(inode);
+    return this._dexie.transaction("rw", this._dexie[this._storename], async () => {
+      return this._dexie[this._storename].delete(inode);
+    });
   }
   async unlinkBulk(inodeBulk) {
     await this._dexie.open();
-    await this._dexie[this._storename].bulkDelete(inodeBulk);
+    return this._dexie.transaction("rw", this._dexie[this._storename], async () => {
+      return this._dexie[this._storename].bulkDelete(inodeBulk);
+    });
   }
   async wipe() {
-    return this._dexie.clear();
+    await this._dexie.open();
+    return this._dexie[this._storename].clear();
   }
   async close() {
+    await this._dexie.open();
     return this._dexie.close();
   }
 };
