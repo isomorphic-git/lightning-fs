@@ -1,6 +1,6 @@
 import FS from "../index.js";
-import DefaultBackend from "../DefaultBackend";
 import DexieBackend from "../DexieBackend";
+import DefaultBackend from "../DefaultBackend";
 
 const fs = new FS("testfs", {
   wipe: true, backend: new DefaultBackend({
@@ -18,8 +18,8 @@ if (!Promise.prototype.finally) {
   }
 }
 
-describe("fs.promises module", () => {
-  describe("mkdir", () => {
+describe("bulk::fs.promises module", () => {
+  describe("bulk::mkdir", () => {
     it("root directory already exists", (done) => {
       fs.mkdir("/").catch(err => {
         expect(err).not.toBe(null);
@@ -41,7 +41,7 @@ describe("fs.promises module", () => {
     });
   });
 
-  describe("writeFile", () => {
+  describe("bulk::writeFile", () => {
     it("create file", done => {
       fs.mkdir("/writeFile").finally(() => {
         fs.writeFile("/writeFile/writeFile-uint8.txt", HELLO).then(() => {
@@ -95,7 +95,7 @@ describe("fs.promises module", () => {
     });
   });
 
-  describe("readFile", () => {
+  describe("bulk::readFile", () => {
     it("read non-existant file throws", done => {
       fs.readFile("/readFile/non-existant.txt").catch(err => {
         expect(err).not.toBe(null);
@@ -135,7 +135,7 @@ describe("fs.promises module", () => {
     });
   });
 
-  describe("readdir", () => {
+  describe("bulk::readdir", () => {
     it("read non-existant dir returns undefined", done => {
       fs.readdir("/readdir/non-existant").catch(err => {
         expect(err).not.toBe(null);
@@ -173,7 +173,7 @@ describe("fs.promises module", () => {
     });
   });
 
-  describe("rmdir", () => {
+  describe("bulk::rmdir", () => {
     it("delete root directory fails", done => {
       fs.rmdir("/").catch(err => {
         expect(err).not.toBe(null);
@@ -231,7 +231,7 @@ describe("fs.promises module", () => {
     });
   });
 
-  describe("unlink", () => {
+  describe("bulk::unlink", () => {
     it("create and delete file", done => {
       fs.mkdir("/unlink").finally(() => {
         fs.writeFile("/unlink/file.txt", "").then(() => {
@@ -254,7 +254,7 @@ describe("fs.promises module", () => {
     });
   });
 
-  describe("rename", () => {
+  describe("bulk::rename", () => {
     it("create and rename file", done => {
       fs.mkdir("/rename").finally(() => {
         fs.writeFile("/rename/a.txt", "").then(() => {
@@ -299,7 +299,7 @@ describe("fs.promises module", () => {
     });
   });
 
-  describe("symlink", () => {
+  describe("bulk::symlink", () => {
     it("symlink a file and read/write to it", done => {
       fs.mkdir("/symlink").finally(() => {
         fs.writeFile("/symlink/a.txt", "hello").then(() => {
@@ -425,7 +425,7 @@ describe("fs.promises module", () => {
     });
   });
 
-  describe("readlink", () => {
+  describe("bulk::readlink", () => {
     it("readlink returns the target path", done => {
       fs.mkdir("/readlink").finally(() => {
         fs.writeFile("/readlink/a.txt", "hello").then(() => {
@@ -454,7 +454,7 @@ describe("fs.promises module", () => {
     });
   });
 
-  describe("du", () => {
+  describe("bulk::du", () => {
     it("du returns the total file size of a path", done => {
       fs.mkdir("/du").finally(() => {
         fs.writeFile("/du/a.txt", "hello").then(() => {

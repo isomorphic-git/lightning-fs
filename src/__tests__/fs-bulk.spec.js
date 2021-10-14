@@ -12,8 +12,8 @@ const fs = new FS("testfs", {
 
 const HELLO = new Uint8Array([72, 69, 76, 76, 79]);
 
-describe("fs module", () => {
-  describe("mkdir", () => {
+describe("bulk::fs module", () => {
+  describe("bulk::mkdir", () => {
     it("root directory already exists", done => {
       fs.mkdir("/", err => {
         expect(err).not.toBe(null);
@@ -36,7 +36,7 @@ describe("fs module", () => {
     });
   });
 
-  describe("writeFile", () => {
+  describe("bulk::writeFile", () => {
     it("create file", done => {
       fs.mkdir("/writeFile", err => {
         fs.writeFile("/writeFile/writeFile-uint8.txt", HELLO, err => {
@@ -81,7 +81,7 @@ describe("fs module", () => {
     });
   });
 
-  describe("readFile", () => {
+  describe("bulk::readFile", () => {
     it("read non-existant file throws", done => {
       fs.readFile("/readFile/non-existant.txt", (err, data) => {
         expect(err).not.toBe(null);
@@ -127,7 +127,7 @@ describe("fs module", () => {
     });
   });
 
-  describe("readdir", () => {
+  describe("bulk::readdir", () => {
     it("read non-existant dir returns undefined", done => {
       fs.readdir("/readdir/non-existant", (err, data) => {
         expect(err).not.toBe(null);
@@ -156,7 +156,7 @@ describe("fs module", () => {
     });
   });
 
-  describe("rmdir", () => {
+  describe("bulk::rmdir", () => {
     it("delete root directory fails", done => {
       fs.rmdir("/", err => {
         expect(err).not.toBe(null);
@@ -206,7 +206,7 @@ describe("fs module", () => {
     });
   });
 
-  describe("unlink", () => {
+  describe("bulk::unlink", () => {
     it("create and delete file", done => {
       fs.mkdir("/unlink", () => {
         fs.writeFile("/unlink/file.txt", "", () => {
@@ -230,7 +230,7 @@ describe("fs module", () => {
     });
   });
 
-  describe("rename", () => {
+  describe("bulk::rename", () => {
     it("create and rename file", done => {
       fs.mkdir("/rename", () => {
         fs.writeFile("/rename/a.txt", "", () => {
@@ -279,7 +279,7 @@ describe("fs module", () => {
     });
   });
 
-  describe("symlink", () => {
+  describe("bulk::symlink", () => {
     it("symlink a file and read/write to it", done => {
       fs.mkdir("/symlink", () => {
         fs.writeFile("/symlink/a.txt", "hello", () => {
@@ -434,7 +434,7 @@ describe("fs module", () => {
     });
   });
 
-  describe("readlink", () => {
+  describe("bulk::readlink", () => {
     it("readlink returns the target path", done => {
       fs.mkdir("/readlink", () => {
         fs.writeFile("/readlink/a.txt", "hello", () => {
@@ -465,7 +465,7 @@ describe("fs module", () => {
     });
   });
 
-  describe("du", () => {
+  describe("bulk::du", () => {
     it("du returns the total file size of a path", done => {
       fs.mkdir("/du", () => {
         fs.writeFile("/du/a.txt", "hello", () => {
