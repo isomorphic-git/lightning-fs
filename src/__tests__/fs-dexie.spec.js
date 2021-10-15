@@ -2,7 +2,7 @@ import FS from "../index.js";
 import DexieBackend from "../DexieBackend";
 import DefaultBackend from "../DefaultBackend";
 
-const fs = new FS("testfs", {
+const fs = new FS("testfs-dexie", {
   wipe: true, backend: new DefaultBackend({
     idbBackendDelegate: (fileDbName, fileStoreName) => {
       return new DexieBackend(fileDbName, fileStoreName);
@@ -12,8 +12,8 @@ const fs = new FS("testfs", {
 
 const HELLO = new Uint8Array([72, 69, 76, 76, 79]);
 
-describe("bulk::fs module", () => {
-  describe("bulk::mkdir", () => {
+describe("dexie::fs module", () => {
+  describe("dexie::mkdir", () => {
     it("root directory already exists", done => {
       fs.mkdir("/", err => {
         expect(err).not.toBe(null);
@@ -36,7 +36,7 @@ describe("bulk::fs module", () => {
     });
   });
 
-  describe("bulk::writeFile", () => {
+  describe("dexie::writeFile", () => {
     it("create file", done => {
       fs.mkdir("/writeFile", err => {
         fs.writeFile("/writeFile/writeFile-uint8.txt", HELLO, err => {
@@ -81,7 +81,7 @@ describe("bulk::fs module", () => {
     });
   });
 
-  describe("bulk::readFile", () => {
+  describe("dexie::readFile", () => {
     it("read non-existant file throws", done => {
       fs.readFile("/readFile/non-existant.txt", (err, data) => {
         expect(err).not.toBe(null);
@@ -127,7 +127,7 @@ describe("bulk::fs module", () => {
     });
   });
 
-  describe("bulk::readdir", () => {
+  describe("dexie::readdir", () => {
     it("read non-existant dir returns undefined", done => {
       fs.readdir("/readdir/non-existant", (err, data) => {
         expect(err).not.toBe(null);
@@ -156,7 +156,7 @@ describe("bulk::fs module", () => {
     });
   });
 
-  describe("bulk::rmdir", () => {
+  describe("dexie::rmdir", () => {
     it("delete root directory fails", done => {
       fs.rmdir("/", err => {
         expect(err).not.toBe(null);
@@ -206,7 +206,7 @@ describe("bulk::fs module", () => {
     });
   });
 
-  describe("bulk::unlink", () => {
+  describe("dexie::unlink", () => {
     it("create and delete file", done => {
       fs.mkdir("/unlink", () => {
         fs.writeFile("/unlink/file.txt", "", () => {
@@ -230,7 +230,7 @@ describe("bulk::fs module", () => {
     });
   });
 
-  describe("bulk::rename", () => {
+  describe("dexie::rename", () => {
     it("create and rename file", done => {
       fs.mkdir("/rename", () => {
         fs.writeFile("/rename/a.txt", "", () => {
@@ -279,7 +279,7 @@ describe("bulk::fs module", () => {
     });
   });
 
-  describe("bulk::symlink", () => {
+  describe("dexie::symlink", () => {
     it("symlink a file and read/write to it", done => {
       fs.mkdir("/symlink", () => {
         fs.writeFile("/symlink/a.txt", "hello", () => {
@@ -434,7 +434,7 @@ describe("bulk::fs module", () => {
     });
   });
 
-  describe("bulk::readlink", () => {
+  describe("dexie::readlink", () => {
     it("readlink returns the target path", done => {
       fs.mkdir("/readlink", () => {
         fs.writeFile("/readlink/a.txt", "hello", () => {
@@ -465,7 +465,7 @@ describe("bulk::fs module", () => {
     });
   });
 
-  describe("bulk::du", () => {
+  describe("dexie::du", () => {
     it("du returns the total file size of a path", done => {
       fs.mkdir("/du", () => {
         fs.writeFile("/du/a.txt", "hello", () => {

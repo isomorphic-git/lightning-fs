@@ -2,8 +2,9 @@ import FS from "../index.js";
 import DexieBackend from "../DexieBackend";
 import DefaultBackend from "../DefaultBackend";
 
-const fs = new FS("testfs", {
-  wipe: true, backend: new DefaultBackend({
+const fs = new FS("testfs-dexie-promises", {
+  wipe: true,
+  backend: new DefaultBackend({
     idbBackendDelegate: (fileDbName, fileStoreName) => {
       return new DexieBackend(fileDbName, fileStoreName);
     },
@@ -18,9 +19,9 @@ if (!Promise.prototype.finally) {
   }
 }
 
-describe("bulk::fs.promises module", () => {
-  describe("bulk::mkdir", () => {
-    it("root directory already exists", (done) => {
+describe("dexie::fs.promises module", () => {
+  describe("dexie::mkdir", () => {
+    it("root directory already exists", done => {
       fs.mkdir("/").catch(err => {
         expect(err).not.toBe(null);
         expect(err.code).toEqual("EEXIST");
@@ -29,19 +30,19 @@ describe("bulk::fs.promises module", () => {
     });
     it("create empty directory", done => {
       fs.mkdir("/mkdir-test")
-      .then(() => {
-        fs.stat("/mkdir-test").then(stat => {
+        .then(() => {
+          fs.stat("/mkdir-test").then(stat => {
+            done();
+          });
+        })
+        .catch(err => {
+          expect(err.code).toEqual("EEXIST");
           done();
         });
-      })
-      .catch(err => {
-        expect(err.code).toEqual("EEXIST");
-        done();
-      });
     });
   });
 
-  describe("bulk::writeFile", () => {
+  describe("dexie::writeFile", () => {
     it("create file", done => {
       fs.mkdir("/writeFile").finally(() => {
         fs.writeFile("/writeFile/writeFile-uint8.txt", HELLO).then(() => {
@@ -82,7 +83,7 @@ describe("bulk::fs.promises module", () => {
         fs.writeFile("/writeFile/writeFile-mode.txt", "HELLO", { mode: 0o635 }).then(() => {
           fs.stat("/writeFile/writeFile-mode.txt").then(stats => {
             let mode = stats.mode;
-            expect(mode).toEqual(0o635)
+            expect(mode).toEqual(0o635);
             fs.writeFile("/writeFile/writeFile-mode.txt", "WORLD").then(() => {
               fs.stat("/writeFile/writeFile-mode.txt").then(stats => {
                 expect(stats.mode).toEqual(0o635);
@@ -95,7 +96,7 @@ describe("bulk::fs.promises module", () => {
     });
   });
 
-  describe("bulk::readFile", () => {
+  describe("dexie::readFile", () => {
     it("read non-existant file throws", done => {
       fs.readFile("/readFile/non-existant.txt").catch(err => {
         expect(err).not.toBe(null);
@@ -135,7 +136,7 @@ describe("bulk::fs.promises module", () => {
     });
   });
 
-  describe("bulk::readdir", () => {
+  describe("dexie::readdir", () => {
     it("read non-existant dir returns undefined", done => {
       fs.readdir("/readdir/non-existant").catch(err => {
         expect(err).not.toBe(null);
@@ -154,7 +155,7 @@ describe("bulk::fs.promises module", () => {
       fs.mkdir("/readdir").finally(() => {
         fs.writeFile("/readdir/1.txt", "").then(() => {
           fs.readdir("/readdir").then(data => {
-            expect(data).toEqual(["1.txt"])
+            expect(data).toEqual(["1.txt"]);
             done();
           });
         });
@@ -165,15 +166,15 @@ describe("bulk::fs.promises module", () => {
         fs.writeFile("/readdir2/not-a-dir", "").then(() => {
           fs.readdir("/readdir2/not-a-dir").catch(err => {
             expect(err).not.toBe(null);
-            expect(err.code).toBe('ENOTDIR');
+            expect(err.code).toBe("ENOTDIR");
             done();
           });
-        })
-      })
+        });
+      });
     });
   });
 
-  describe("bulk::rmdir", () => {
+  describe("dexie::rmdir", () => {
     it("delete root directory fails", done => {
       fs.rmdir("/").catch(err => {
         expect(err).not.toBe(null);
@@ -192,15 +193,14 @@ describe("bulk::fs.promises module", () => {
       fs.mkdir("/rmdir").finally(() => {
         fs.mkdir("/rmdir/not-empty").finally(() => {
           fs.writeFile("/rmdir/not-empty/file.txt", "").then(() => {
-
             fs.rmdir("/rmdir/not-empty").catch(err => {
               expect(err).not.toBe(null);
               expect(err.code).toEqual("ENOTEMPTY");
               done();
             });
-          })
-        })
-      })
+          });
+        });
+      });
     });
     it("delete empty directory", done => {
       fs.mkdir("/rmdir").finally(() => {
@@ -223,7 +223,7 @@ describe("bulk::fs.promises module", () => {
         fs.writeFile("/rmdir/not-a-dir", "").then(() => {
           fs.rmdir("/rmdir/not-a-dir").catch(err => {
             expect(err).not.toBe(null);
-            expect(err.code).toBe('ENOTDIR');
+            expect(err.code).toBe("ENOTDIR");
             done();
           });
         });
@@ -231,7 +231,7 @@ describe("bulk::fs.promises module", () => {
     });
   });
 
-  describe("bulk::unlink", () => {
+  describe("dexie::unlink", () => {
     it("create and delete file", done => {
       fs.mkdir("/unlink").finally(() => {
         fs.writeFile("/unlink/file.txt", "").then(() => {
@@ -239,11 +239,11 @@ describe("bulk::fs.promises module", () => {
             let originalSize = data.length;
             fs.unlink("/unlink/file.txt").then(() => {
               fs.readdir("/unlink").then(data => {
-                expect(data.length).toBe(originalSize - 1)
+                expect(data.length).toBe(originalSize - 1);
                 expect(data.includes("file.txt")).toBe(false);
                 fs.readFile("/unlink/file.txt").catch(err => {
-                  expect(err).not.toBe(null)
-                  expect(err.code).toBe("ENOENT")
+                  expect(err).not.toBe(null);
+                  expect(err.code).toBe("ENOENT");
                   done();
                 });
               });
@@ -254,7 +254,7 @@ describe("bulk::fs.promises module", () => {
     });
   });
 
-  describe("bulk::rename", () => {
+  describe("dexie::rename", () => {
     it("create and rename file", done => {
       fs.mkdir("/rename").finally(() => {
         fs.writeFile("/rename/a.txt", "").then(() => {
@@ -263,10 +263,10 @@ describe("bulk::fs.promises module", () => {
               expect(data.includes("a.txt")).toBe(false);
               expect(data.includes("b.txt")).toBe(true);
               fs.readFile("/rename/a.txt").catch(err => {
-                expect(err).not.toBe(null)
-                expect(err.code).toBe("ENOENT")
+                expect(err).not.toBe(null);
+                expect(err.code).toBe("ENOENT");
                 fs.readFile("/rename/b.txt", "utf8").then(data => {
-                  expect(data).toBe("")
+                  expect(data).toBe("");
                   done();
                 });
               });
@@ -284,10 +284,10 @@ describe("bulk::fs.promises module", () => {
                 expect(data.includes("a")).toBe(false);
                 expect(data.includes("b")).toBe(true);
                 fs.readFile("/rename/a/file.txt").catch(err => {
-                  expect(err).not.toBe(null)
-                  expect(err.code).toBe("ENOENT")
+                  expect(err).not.toBe(null);
+                  expect(err.code).toBe("ENOENT");
                   fs.readFile("/rename/b/file.txt", "utf8").then(data => {
-                    expect(data).toBe("")
+                    expect(data).toBe("");
                     done();
                   });
                 });
@@ -299,19 +299,19 @@ describe("bulk::fs.promises module", () => {
     });
   });
 
-  describe("bulk::symlink", () => {
+  describe("dexie::symlink", () => {
     it("symlink a file and read/write to it", done => {
       fs.mkdir("/symlink").finally(() => {
         fs.writeFile("/symlink/a.txt", "hello").then(() => {
           fs.symlink("/symlink/a.txt", "/symlink/b.txt").then(() => {
             fs.readFile("/symlink/b.txt", "utf8").then(data => {
-              expect(data).toBe("hello")
+              expect(data).toBe("hello");
               fs.writeFile("/symlink/b.txt", "world").then(() => {
                 fs.readFile("/symlink/a.txt", "utf8").then(data => {
                   expect(data).toBe("world");
                   done();
-                })
-              })
+                });
+              });
             });
           });
         });
@@ -322,13 +322,13 @@ describe("bulk::fs.promises module", () => {
         fs.writeFile("/symlink/a.txt", "hello").then(() => {
           fs.symlink("a.txt", "/symlink/b.txt").then(() => {
             fs.readFile("/symlink/b.txt", "utf8").then(data => {
-              expect(data).toBe("hello")
+              expect(data).toBe("hello");
               fs.writeFile("/symlink/b.txt", "world").then(() => {
                 fs.readFile("/symlink/a.txt", "utf8").then(data => {
                   expect(data).toBe("world");
                   done();
-                })
-              })
+                });
+              });
             });
           });
         });
@@ -342,13 +342,13 @@ describe("bulk::fs.promises module", () => {
               fs.readdir("/symlink/b").then(data => {
                 expect(data.includes("file.txt")).toBe(true);
                 fs.readFile("/symlink/b/file.txt", "utf8").then(data => {
-                  expect(data).toBe("data")
+                  expect(data).toBe("data");
                   fs.writeFile("/symlink/b/file2.txt", "world").then(() => {
                     fs.readFile("/symlink/a/file2.txt", "utf8").then(data => {
                       expect(data).toBe("world");
                       done();
-                    })
-                  })
+                    });
+                  });
                 });
               });
             });
@@ -365,13 +365,13 @@ describe("bulk::fs.promises module", () => {
                 fs.readdir("/symlink/b/c").then(data => {
                   expect(data.includes("file.txt")).toBe(true);
                   fs.readFile("/symlink/b/c/file.txt", "utf8").then(data => {
-                    expect(data).toBe("data")
+                    expect(data).toBe("data");
                     fs.writeFile("/symlink/b/c/file2.txt", "world").then(() => {
                       fs.readFile("/symlink/a/file2.txt", "utf8").then(data => {
                         expect(data).toBe("world");
                         done();
-                      })
-                    })
+                      });
+                    });
                   });
                 });
               });
@@ -386,16 +386,16 @@ describe("bulk::fs.promises module", () => {
           fs.writeFile("/symlink/del/file.txt", "data").then(() => {
             fs.symlink("/symlink/del/file.txt", "/symlink/del/file2.txt").then(() => {
               fs.readdir("/symlink/del").then(data => {
-                expect(data.includes("file.txt")).toBe(true)
-                expect(data.includes("file2.txt")).toBe(true)
+                expect(data.includes("file.txt")).toBe(true);
+                expect(data.includes("file2.txt")).toBe(true);
                 fs.unlink("/symlink/del/file2.txt").then(data => {
                   fs.readdir("/symlink/del").then(data => {
-                    expect(data.includes("file.txt")).toBe(true)
-                    expect(data.includes("file2.txt")).toBe(false)
+                    expect(data.includes("file.txt")).toBe(true);
+                    expect(data.includes("file2.txt")).toBe(false);
                     fs.readFile("/symlink/del/file.txt", "utf8").then(data => {
-                      expect(data).toBe("data")
+                      expect(data).toBe("data");
                       done();
-                    })
+                    });
                   });
                 });
               });
@@ -410,11 +410,11 @@ describe("bulk::fs.promises module", () => {
           fs.writeFile("/symlink/lstat/file.txt", "data").then(() => {
             fs.symlink("/symlink/lstat/file.txt", "/symlink/lstat/file2.txt").then(() => {
               fs.stat("/symlink/lstat/file2.txt").then(stat => {
-                expect(stat.isFile()).toBe(true)
-                expect(stat.isSymbolicLink()).toBe(false)
+                expect(stat.isFile()).toBe(true);
+                expect(stat.isSymbolicLink()).toBe(false);
                 fs.lstat("/symlink/lstat/file2.txt").then(stat => {
-                  expect(stat.isFile()).toBe(false)
-                  expect(stat.isSymbolicLink()).toBe(true)
+                  expect(stat.isFile()).toBe(false);
+                  expect(stat.isSymbolicLink()).toBe(true);
                   done();
                 });
               });
@@ -425,13 +425,13 @@ describe("bulk::fs.promises module", () => {
     });
   });
 
-  describe("bulk::readlink", () => {
+  describe("dexie::readlink", () => {
     it("readlink returns the target path", done => {
       fs.mkdir("/readlink").finally(() => {
         fs.writeFile("/readlink/a.txt", "hello").then(() => {
           fs.symlink("/readlink/a.txt", "/readlink/b.txt").then(() => {
             fs.readlink("/readlink/b.txt", "utf8").then(data => {
-              expect(data).toBe("/readlink/a.txt")
+              expect(data).toBe("/readlink/a.txt");
               done();
             });
           });
@@ -444,7 +444,7 @@ describe("bulk::fs.promises module", () => {
           fs.writeFile("/readlink/c.txt", "hello").then(() => {
             fs.symlink("/readlink/c.txt", "/readlink/d.txt").then(() => {
               fs.readlink("/readlink/sub/d.txt").then(data => {
-                expect(data).toBe("/readlink/c.txt")
+                expect(data).toBe("/readlink/c.txt");
                 done();
               });
             });
@@ -454,7 +454,7 @@ describe("bulk::fs.promises module", () => {
     });
   });
 
-  describe("bulk::du", () => {
+  describe("dexie::du", () => {
     it("du returns the total file size of a path", done => {
       fs.mkdir("/du").finally(() => {
         fs.writeFile("/du/a.txt", "hello").then(() => {
@@ -463,11 +463,11 @@ describe("bulk::fs.promises module", () => {
               fs.writeFile("/du/sub/a.txt", "hello").then(() => {
                 fs.writeFile("/du/sub/b.txt", "hello").then(() => {
                   fs.du("/du/sub/a.txt").then(size => {
-                    expect(size).toBe(5)
+                    expect(size).toBe(5);
                     fs.du("/du/sub").then(size => {
-                      expect(size).toBe(10)
+                      expect(size).toBe(10);
                       fs.du("/du").then(size => {
-                        expect(size).toBe(20)
+                        expect(size).toBe(20);
                         done();
                       });
                     });

@@ -130,6 +130,7 @@ module.exports = class DefaultBackend {
   async readFileBulk(filepaths, opts) {
     const { encoding } = opts;
     if (encoding && encoding !== "utf8") {
+      console.info(encoding)
       throw new Error('Only "utf8" encoding is supported in readFile');
     }
 
@@ -144,10 +145,14 @@ module.exports = class DefaultBackend {
     const inoBulk = [];
     const enoentBulk = [];
     for (const filepath of filepaths) {
-      const stat = this._cache.stat(filepath);
-      if (stat) {
-        inoBulk.push(stat.ino);
-      } else {
+      try {
+        const stat = this._cache.stat(filepath);
+        if (stat) {
+          inoBulk.push(stat.ino);
+        } else {
+          enoentBulk.push(filepath);
+        }
+      } catch (e) {
         enoentBulk.push(filepath);
       }
     }
@@ -163,7 +168,7 @@ module.exports = class DefaultBackend {
 
     const fileBulk = [];
     for (let i = 0; i < dataBulk.length; i++) {
-      fileBulk[i] = [filepaths[i], dataBulk[i]];
+      fileBulk[i] = [filepaths[i], encoding ? decode(dataBulk[i]) : dataBulk[i]];
     }
 
     return fileBulk;
@@ -197,7 +202,7 @@ module.exports = class DefaultBackend {
       dataBulk.push(typeof data === "string" ? encode(data) : data);
     }
 
-    await this._idb.writeFileBulk(inoBulk, dataBulk)
+    await this._idb.writeFileBulk(inoBulk, dataBulk);
   }
   async unlink(filepath, opts) {
     const stat = this._cache.lstat(filepath);
