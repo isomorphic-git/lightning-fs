@@ -47,6 +47,7 @@
   },
   "files": [
     "**/*.js",
+    "index.d.ts",
     "!__tests__",
     "!coverage"
   ],
