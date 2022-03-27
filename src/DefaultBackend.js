@@ -21,12 +21,13 @@ module.exports = class DefaultBackend {
     url,
     urlauto,
     fileDbName = name,
+    db = null,
     fileStoreName = name + "_files",
     lockDbName = name + "_lock",
     lockStoreName = name + "_lock",
   } = {}) {
     this._name = name
-    this._idb = new IdbBackend(fileDbName, fileStoreName);
+    this._idb = db || new IdbBackend(fileDbName, fileStoreName);
     this._mutex = navigator.locks ? new Mutex2(name) : new Mutex(lockDbName, lockStoreName);
     this._cache = new CacheFS(name);
     this._opts = { wipe, url };
@@ -118,6 +119,8 @@ module.exports = class DefaultBackend {
       }
       if (encoding === "utf8") {
         data = decode(data);
+      } else {
+        data.toString = () => decode(data);
       }
     }
     if (!stat) throw new ENOENT(filepath)
