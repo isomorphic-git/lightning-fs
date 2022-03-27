@@ -119,6 +119,8 @@ module.exports = class DefaultBackend {
       }
       if (encoding === "utf8") {
         data = decode(data);
+      } else {
+        data.toString = () => decode(data);
       }
     }
     if (!stat) throw new ENOENT(filepath)
