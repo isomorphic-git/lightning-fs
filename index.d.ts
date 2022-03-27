@@ -287,7 +287,7 @@ declare module '@isomorphic-git/lightning-fs' {
       mode: number
     }
   }
-  export default FS
+  export = FS
 }
 
 declare module '@isomorphic-git/lightning-fs/src/path' {
@@ -299,5 +299,5 @@ declare module '@isomorphic-git/lightning-fs/src/path' {
     function dirname(path: string): string
     function resolve(...paths: string[]): string
   }
-  export default Path
+  export = Path
 }
