@@ -69,7 +69,9 @@ Options object:
 | `lockDbName`    | string             | Customize the database name for the lock mutex                                                                                                                                             |
 | `lockStoreName` | string             | Customize the store name for the lock mutex                                                                                                                                                |
 | `defer`         | boolean = false    | If true, avoids mutex contention during initialization                                                                                                                                     |
+| `db`            | IDB                | Replacement for DB object that hold Filesystem data. It's low level replacement for `backend` option.  |
 | `backend`       | IBackend           | If present, none of the other arguments (except `defer`) have any effect, and instead of using the normal LightningFS stuff, LightningFS acts as a wrapper around the provided custom backend. |
+
 
 #### Advanced usage
 
@@ -258,6 +260,17 @@ interface IBackend {
   deactivate?(): Awaited<void>; // called after fs has been idle for a while
   destroy?(): Awaited<void>; // called before hotswapping backends
 }
+
+interface IDB {
+  saveSuperblock(superblock): void;
+  loadSuperblock(): Awaited<Buffer>;
+  readFile(inode): Awaited<Buffer>;
+  writeFile(inode, data): Awaited<void>;
+  unlink(inode): Awaited<void>;
+  wipe(): void;
+  close(): void;
+}
+
 ```
 
 ## License
