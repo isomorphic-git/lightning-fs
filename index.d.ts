@@ -206,6 +206,11 @@ declare module '@isomorphic-git/lightning-fs' {
        * @returns The size of a file or directory in bytes.
        */
       du(filepath: string): Promise<number>
+      /**
+       * Function that saves anything that need to be saved in IndexedBD or custom IDB object. Right now it saves SuperBlock so it's save to dump the object as dump it into a file (e.g. from a Browser)
+       * @returns Promise that resolves when super block is saved to file
+       */
+       flush(): Promise<void>
     }
 
     export interface Options {
@@ -245,8 +250,19 @@ declare module '@isomorphic-git/lightning-fs' {
        * @default false
        */
       defer?: boolean
-
+      db: FS.IDB
     }
+    export interface IDB {
+      constructor(dbname: string, storename: string): IDB
+      saveSuperblock(sb: Uint8Array): TypeOrPromise<void>
+      loadSuperblock(): TypeOrPromise<FS.SuperBlock>
+      loadFile(inode: number): TypeOrPromise<Uint8Array>
+      writeFile(inode: number, data: Uint8Array): TypeOrPromise<void>
+      wipe(): TypeOrPromise<void>
+      close(): TypeOrPromise<void>
+    }
+    type TypeOrPromise<T> = T | Promise<T>
+    export type SuperBlock = Map<string | number, any>
     export interface MKDirOptions {
       /**
        * Posix mode permissions

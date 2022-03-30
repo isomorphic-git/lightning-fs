@@ -13,7 +13,7 @@ const path = require("./path.js");
 module.exports = class DefaultBackend {
   constructor() {
     this.saveSuperblock = debounce(() => {
-      this._saveSuperblock();
+      this.flush();
     }, 500);
   }
   async init (name, {
@@ -179,5 +179,8 @@ module.exports = class DefaultBackend {
   }
   du(filepath) {
     return this._cache.du(filepath);
+  }
+  flush() {
+    return this._saveSuperblock();
   }
 }

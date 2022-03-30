@@ -29,6 +29,7 @@ module.exports = class FS {
     this.symlink = this.symlink.bind(this)
     this.backFile = this.backFile.bind(this)
     this.du = this.du.bind(this)
+    this.flush = this.flush.bind(this)
   }
   init(name, options) {
     return this.promises.init(name, options)
@@ -84,5 +85,9 @@ module.exports = class FS {
   du(filepath, cb) {
     const [resolve, reject] = wrapCallback(cb);
     this.promises.du(filepath).then(resolve).catch(reject);
+  }
+  flush(cb) {
+    const [resolve, reject] = wrapCallback(cb);
+    this.promises.flush().then(resolve).catch(reject);
   }
 }

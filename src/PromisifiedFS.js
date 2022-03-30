@@ -198,4 +198,7 @@ module.exports = class PromisifiedFS {
   async du(filepath) {
     return this._backend.du(filepath);
   }
+  async flush() {
+    return this._backend.flush();
+  }
 }
