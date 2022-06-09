@@ -47,7 +47,8 @@ declare module '@isomorphic-git/lightning-fs' {
 
     writeFile(filepath: string, data: Uint8Array | string, options: FS.WriteFileOptions | undefined | string, cb: (err: Error) => void): void
 
-    readFile(filepath: string, options: FS.ReadFileOptions | undefined | string, cb: (err: Error, data: Uint8Array | string) => void): void
+    readFile(filepath: string, options: 'utf8' | { encoding: 'utf8' }, cb: (err: Error, data: string) => void): void
+    readFile(filepath: string, options: {} | void, cb: (err: Error, data: Uint8Array) => void): void
 
     /**
      * Delete a file
@@ -149,7 +150,8 @@ declare module '@isomorphic-git/lightning-fs' {
 
       writeFile(filepath: string, data: Uint8Array | string, options?: FS.WriteFileOptions | string): Promise<void>
 
-      readFile(filepath: string, options?: FS.ReadFileOptions | string): Promise<Uint8Array | string>
+      readFile(filepath: string, options: 'utf8' | { encoding: 'utf8' }): Promise<string>
+      readFile(filepath: string, options?: {}): Promise<Uint8Array>
 
       /**
        * Delete a file
