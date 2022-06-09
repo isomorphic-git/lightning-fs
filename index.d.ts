@@ -149,6 +149,7 @@ declare module '@isomorphic-git/lightning-fs' {
 
       writeFile(filepath: string, data: Uint8Array | string, options?: FS.WriteFileOptions | string): Promise<void>
 
+      readFile(filepath: string, options: 'utf8' | { encoding: 'utf8' }): Promise<string>
       readFile(filepath: string, options?: FS.ReadFileOptions | string): Promise<Uint8Array | string>
 
       /**
