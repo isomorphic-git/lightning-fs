@@ -95,7 +95,7 @@ module.exports = class DefaultBackend {
     return this._cache.writeStat(filepath, size, opts)
   }
   async readFile(filepath, opts) {
-    const { encoding } = opts;
+    const encoding = typeof opts === "string" ? opts : opts?.encoding;
     if (encoding && encoding !== 'utf8') throw new Error('Only "utf8" encoding is supported in readFile');
     let data = null, stat = null
     try {
