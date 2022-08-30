@@ -252,7 +252,11 @@ declare module '@isomorphic-git/lightning-fs' {
        * @default false
        */
       defer?: boolean
-      db: FS.IDB
+      /**
+       * Custom database instance
+       * @default null
+       */
+      db?: FS.IDB
     }
     export interface IDB {
       constructor(dbname: string, storename: string): IDB
