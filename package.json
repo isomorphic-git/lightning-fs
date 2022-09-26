@@ -22,7 +22,7 @@
     "just-once": "1.1.0"
   },
   "devDependencies": {
-    "karma": "2.0.5",
+    "karma": "6.4.1",
     "karma-browserstack-launcher": "^1.5.1",
     "karma-chrome-launcher": "3.1.0",
     "karma-edge-launcher": "0.4.2",
