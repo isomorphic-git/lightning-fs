@@ -308,7 +308,7 @@ module.exports = class WhatFsBackend {
       const handle = await dir.getFileHandle(filename)
       const file = await handle.getFile()
       const mtimeMs = file.lastModified
-      // NEEDED: https://github.com/whatwg/fs/issues/12
+      // NEEDED: more metadata, https://github.com/whatwg/fs/issues/12
       return {
         size: file.size,
         mtimeMs,
@@ -372,5 +372,24 @@ module.exports = class WhatFsBackend {
     if (!resultNotFound) {
        throw new Error("File '${filepath}' already existed")
     }
+  }
+  async copy(src, dest) {
+    const content = await this.readFile(src)
+    await this.writeFile(dest, content)
+  }
+  async access(filepath) {
+    // WANTED: more metadata, https://github.com/whatwg/fs/issues/12
+    // TODO: we could implement some horrible test of reading/writing
+    // but for now assume we have access if it exists
+    await this.stat(filepath)
+    // https://github.com/nodejs/node/blob/main/typings/internalBinding/constants.d.ts#L179
+    return 255;
+  }
+  async appendFile(path, data, opts) {
+    const mode = Flags.fallback(opts?.flags, 'a')
+    if (mode.write && !mode.append) {
+      throw new BadModeError(mode)
+    }
+    await this.writeFile(path, data, { ...opts, mode })
   }
 }
