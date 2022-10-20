@@ -261,7 +261,7 @@ declare module '@isomorphic-git/lightning-fs' {
     export interface IDB {
       saveSuperblock(sb: FS.SuperBlock): TypeOrPromise<void>
       loadSuperblock(): TypeOrPromise<FS.SuperBlock | string | null>
-      loadFile(inode: number): TypeOrPromise<Uint8Array | string>
+      readFile(inode: number): TypeOrPromise<Uint8Array | string>
       writeFile(inode: number, data: Uint8Array | string): TypeOrPromise<void>
       wipe(): TypeOrPromise<void>
       close(): TypeOrPromise<void>
