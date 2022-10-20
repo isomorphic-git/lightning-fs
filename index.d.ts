@@ -259,7 +259,6 @@ declare module '@isomorphic-git/lightning-fs' {
       db?: FS.IDB
     }
     export interface IDB {
-      constructor(dbname: string, storename: string): IDB
       saveSuperblock(sb: Uint8Array): TypeOrPromise<void>
       loadSuperblock(): TypeOrPromise<FS.SuperBlock>
       loadFile(inode: number): TypeOrPromise<Uint8Array>
