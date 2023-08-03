@@ -1,5 +1,5 @@
 const path = require("./path.js");
-const { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY } = require("./errors.js");
+const { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY, EISDIR } = require("./errors.js");
 
 const STAT = 0;
 
@@ -164,13 +164,22 @@ module.exports = class CacheFS {
   }
   writeStat(filepath, size, { mode }) {
     let ino;
+    let oldStat;
     try {
-      let oldStat = this.stat(filepath);
+      oldStat = this.stat(filepath);
+    } catch (err) {}
+
+    if (oldStat !== undefined) {
+      if (oldStat.type === 'dir') {
+        throw new EISDIR();
+      }
+  
       if (mode == null) {
         mode = oldStat.mode;
       }
       ino = oldStat.ino;
-    } catch (err) {}
+    }
+
     if (mode == null) {
       mode = 0o666;
     }

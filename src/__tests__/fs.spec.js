@@ -71,6 +71,14 @@ describe("fs module", () => {
         });
       });
     });
+    it("write file in place of an existing directory throws", done => {
+      fs.mkdir("/writeFile", err => {
+        fs.writeFile("/writeFile", "HELLO", err => {
+          expect(err).not.toBe(null);
+          done();
+        });
+      });
+    });
   });
 
   describe("readFile", () => {

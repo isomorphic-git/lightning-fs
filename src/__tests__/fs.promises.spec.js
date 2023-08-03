@@ -85,6 +85,19 @@ describe("fs.promises module", () => {
         });
       });
     });
+    it("write file in place of an existing directory throws", done => {
+      fs.mkdir("/writeFile").finally(() => {
+        fs.writeFile("/writeFile", "HELLO")
+          .then(() => {
+            fail();
+            done();
+          })
+          .catch(err => {
+            expect(err).not.toBe(null);
+            done();
+          });
+      });
+    });
   });
 
   describe("readFile", () => {
