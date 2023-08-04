@@ -2,7 +2,7 @@ jobs:
 - job: Linux
 
   pool:
-    vmImage: 'Ubuntu 18.04'
+    vmImage: 'ubuntu-latest'
 
   steps:
   - task: NodeTool@0
