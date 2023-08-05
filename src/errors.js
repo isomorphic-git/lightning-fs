@@ -17,5 +17,6 @@ const ENOENT = Err("ENOENT");
 const ENOTDIR = Err("ENOTDIR");
 const ENOTEMPTY = Err("ENOTEMPTY");
 const ETIMEDOUT = Err("ETIMEDOUT");
+const EISDIR = Err("EISDIR");
 
-module.exports = { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY, ETIMEDOUT };
+module.exports = { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY, ETIMEDOUT, EISDIR };
