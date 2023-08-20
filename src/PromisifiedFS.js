@@ -94,7 +94,7 @@ module.exports = class PromisifiedFS {
     if (!options.defer) {
       // The fs is initially activated when constructed (in order to wipe/save the superblock)
       // This is not awaited, because that would create a cycle.
-      this._deactivate()
+      this.stat('/')
     }
   }
   async _gracefulShutdown () {
