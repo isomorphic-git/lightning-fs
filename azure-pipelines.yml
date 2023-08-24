@@ -1,3 +1,6 @@
+variables:
+  system.debug: true
+
 jobs:
 - job: Linux
 
