@@ -62,8 +62,8 @@ jobs:
           path: isomorphic-git-lightning-fs-0.0.0-development.tgz
 
       - name: Publish to npm
-        if: ${{ github.ref == 'beta'}}
-        # if: ${{ github.ref == 'main' || github.ref_name == 'beta' }}
+        if: ${{ github.ref == 'refs/heads/beta'}}
+        # if: ${{ github.ref == 'refs/heads/main' || github.ref_name == 'refs/heads/beta' }}
         run: |
           npm run semantic-release
         env:
