@@ -1,0 +1,71 @@
+name: Build
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+# Cancel in-progress runs for the current workflow
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (Node.js v18)
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run build
+        run: |
+          npm run build
+
+      - name: Run tests
+        run: |
+          npm test
+        env:
+          BROWSER_STACK_ACCESS_KEY: ${{ secrets.BROWSER_STACK_ACCESS_KEY }}
+          BROWSER_STACK_USERNAME: ${{ secrets.BROWSER_STACK_USERNAME }}
+          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+          TEST_BROWSERS: 'ChromeHeadlessNoSandbox,FirefoxHeadless,sl_edge,sl_safari,sl_ios_safari,bs_android_chrome'
+
+      - name: Save test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-jest
+          path: junit/*.xml
+
+      - name: Prepare installable tarball
+        if: ${{ !cancelled() && !github.event.pull_request.head.repo.fork }}
+        run: |
+          npm pack
+
+      - name: Save npm-tarball.tgz
+        if: ${{ !cancelled() && !github.event.pull_request.head.repo.fork }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-tarball.tgz
+          path: isomorphic-git-lightning-fs-0.0.0-development.tgz
+
+      - name: Publish to npm
+        if: ${{ github.ref == 'refs/heads/beta'}}
+        # if: ${{ github.ref == 'refs/heads/main' || github.ref_name == 'refs/heads/beta' }}
+        run: |
+          npm run semantic-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
