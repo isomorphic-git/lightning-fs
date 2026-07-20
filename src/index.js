@@ -1,6 +1,7 @@
 const once = require("just-once");
 
 const PromisifiedFS = require('./PromisifiedFS');
+const MemoryBackend = require('./MemoryBackend');
 
 function wrapCallback (opts, cb) {
   if (typeof opts === "function") {
@@ -91,3 +92,7 @@ module.exports = class FS {
     this.promises.flush().then(resolve).catch(reject);
   }
 }
+
+// Expose backend classes so they can be used as named imports:
+//   import { MemoryBackend } from '@isomorphic-git/lightning-fs'
+module.exports.MemoryBackend = MemoryBackend;
