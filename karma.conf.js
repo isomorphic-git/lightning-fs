@@ -108,9 +108,9 @@ module.exports = function (config) {
       bs_android_chrome: {
         base: 'BrowserStack',
         os: 'android',
-        os_version: '10.0',
+        os_version: '12.0',
         browser: 'android',
-        device: 'Google Pixel 4',
+        device: 'Google Pixel 6',
         real_mobile: true,
       },
       FirefoxHeadless: {
