@@ -55,6 +55,12 @@ describe("MemoryBackend", function () {
     expect(backend.readFile(1)).toBe(data);
   });
 
+  it("writes and reads file data by inode 0", function () {
+    const data = new Uint8Array([0x45]);
+    backend.writeFile(0, data);
+    expect(backend.readFile(0)).toBe(data);
+  });
+
   it("overwrites file data for the same inode", function () {
     backend.writeFile(1, new Uint8Array([1]));
     const newData = new Uint8Array([2]);
@@ -89,17 +95,15 @@ describe("MemoryBackend", function () {
   // wipe
   // -----------------------------------------------------------------------
 
-  it("wipe clears all files and the superblock", function (done) {
+  it("wipe clears all files and the superblock", async function () {
     backend.saveSuperblock("sb");
     backend.writeFile(1, new Uint8Array([0x41]));
     backend.writeFile(2, new Uint8Array([0x42]));
 
-    backend.wipe().then(function () {
-      expect(backend.loadSuperblock()).toBeNull();
-      expect(backend.readFile(1)).toBeNull();
-      expect(backend.readFile(2)).toBeNull();
-      done();
-    });
+    await backend.wipe();
+    expect(backend.loadSuperblock()).toBeNull();
+    expect(backend.readFile(1)).toBeNull();
+    expect(backend.readFile(2)).toBeNull();
   });
 
   // -----------------------------------------------------------------------
