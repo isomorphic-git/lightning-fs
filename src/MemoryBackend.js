@@ -45,7 +45,7 @@ module.exports = class MemoryBackend {
    * @returns {any|null}
    */
   loadSuperblock() {
-    return this._map.get('!root') ?? null
+    return this._map.get('!root') || null
   }
 
   /**
@@ -54,7 +54,7 @@ module.exports = class MemoryBackend {
    * @returns {any|null}
    */
   readFile(inode) {
-    return this._map.get(inode) ?? null
+    return this._map.get(inode) || null
   }
 
   /**
