@@ -105,6 +105,20 @@ describe("http fallback", () => {
         done();
       });
     });
+    it("backing an already-backed file preserves its chown'd owner", done => {
+      fs.chown("/a.txt", 7, 8, (err) => {
+        expect(err).toBe(null);
+        fs.backFile("/a.txt", (err) => {
+          expect(err).toBe(null);
+          fs.stat("/a.txt", (err, stats) => {
+            expect(err).toBe(null);
+            expect(stats.uid).toEqual(7);
+            expect(stats.gid).toEqual(8);
+            done();
+          });
+        });
+      });
+    });
     it("backing a file makes it readable", done => {
       fs.backFile("/not-in-superblock.txt", (err, data) => {
         expect(err).toBe(null)

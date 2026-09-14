@@ -25,11 +25,13 @@ module.exports = class DefaultBackend {
     fileStoreName = name + "_files",
     lockDbName = name + "_lock",
     lockStoreName = name + "_lock",
+    uid = 1,
+    gid = 1,
   } = {}) {
     this._name = name
     this._idb = db || new IdbBackend(fileDbName, fileStoreName);
     this._mutex = navigator.locks ? new Mutex2(name) : new Mutex(lockDbName, lockStoreName);
-    this._cache = new CacheFS(name);
+    this._cache = new CacheFS(name, { uid, gid });
     this._opts = { wipe, url };
     this._needsWipe = !!wipe;
     if (url) {
@@ -172,6 +174,12 @@ module.exports = class DefaultBackend {
   }
   symlink(target, filepath) {
     this._cache.symlink(target, filepath);
+  }
+  chmod(filepath, mode) {
+    this._cache.chmod(filepath, mode);
+  }
+  chown(filepath, uid, gid) {
+    this._cache.chown(filepath, uid, gid);
   }
   async backFile(filepath, opts) {
     let size = await this._http.sizeFile(filepath)

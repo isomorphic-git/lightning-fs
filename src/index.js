@@ -30,6 +30,8 @@ module.exports = class FS {
     this.backFile = this.backFile.bind(this)
     this.du = this.du.bind(this)
     this.flush = this.flush.bind(this)
+    this.chmod = this.chmod.bind(this)
+    this.chown = this.chown.bind(this)
   }
   init(name, options) {
     return this.promises.init(name, options)
@@ -89,5 +91,13 @@ module.exports = class FS {
   flush(cb) {
     const [resolve, reject] = wrapCallback(cb);
     this.promises.flush().then(resolve).catch(reject);
+  }
+  chmod(filepath, mode, cb) {
+    const [resolve, reject] = wrapCallback(cb);
+    this.promises.chmod(filepath, mode).then(resolve).catch(reject);
+  }
+  chown(filepath, uid, gid, cb) {
+    const [resolve, reject] = wrapCallback(cb);
+    this.promises.chown(filepath, uid, gid).then(resolve).catch(reject);
   }
 }

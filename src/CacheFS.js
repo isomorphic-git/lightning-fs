@@ -4,10 +4,12 @@ const { EEXIST, ENOENT, ENOTDIR, ENOTEMPTY, EISDIR } = require("./errors.js");
 const STAT = 0;
 
 module.exports = class CacheFS {
-  constructor() {
+  constructor(name, { uid = 1, gid = 1 } = {}) {
+    this._uid = uid;
+    this._gid = gid;
   }
   _makeRoot(root = new Map()) {
-    root.set(STAT, { mode: 0o777, type: "dir", size: 0, ino: 0, mtimeMs: Date.now() });
+    root.set(STAT, { mode: 0o777, type: "dir", size: 0, ino: 0, mtimeMs: Date.now(), uid: this._uid, gid: this._gid });
     return root
   }
   activate(superblock = null) {
@@ -70,6 +72,8 @@ module.exports = class CacheFS {
   }
   parse(print) {
     let autoinc = 0;
+    const uid = this._uid;
+    const gid = this._gid;
 
     function mk(stat) {
       const ino = ++autoinc;
@@ -79,7 +83,7 @@ module.exports = class CacheFS {
       mode = parseInt(mode, 8);
       size = size ? parseInt(size) : 0;
       mtimeMs = mtimeMs ? parseInt(mtimeMs) : Date.now();
-      return new Map([[STAT, { mode, type, size, mtimeMs, ino }]]);
+      return new Map([[STAT, { mode, type, size, mtimeMs, ino, uid, gid }]]);
     }
 
     let lines = print.trim().split("\n");
@@ -143,6 +147,8 @@ module.exports = class CacheFS {
       size: 0,
       mtimeMs: Date.now(),
       ino: this.autoinc(),
+      uid: this._uid,
+      gid: this._gid,
     };
     entry.set(STAT, stat);
     dir.set(basename, entry);
@@ -163,7 +169,7 @@ module.exports = class CacheFS {
     return [...dir.keys()].filter(key => typeof key === "string");
   }
   writeStat(filepath, size, { mode }) {
-    let ino;
+    let ino, uid, gid;
     let oldStat;
     try {
       oldStat = this.stat(filepath);
@@ -173,15 +179,23 @@ module.exports = class CacheFS {
       if (oldStat.type === 'dir') {
         throw new EISDIR();
       }
-  
+
       if (mode == null) {
         mode = oldStat.mode;
       }
+      uid = oldStat.uid;
+      gid = oldStat.gid;
       ino = oldStat.ino;
     }
 
     if (mode == null) {
       mode = 0o666;
+    }
+    if (uid == null) {
+      uid = this._uid;
+    }
+    if (gid == null) {
+      gid = this._gid;
     }
     if (ino == null) {
       ino = this.autoinc();
@@ -194,6 +208,8 @@ module.exports = class CacheFS {
       size,
       mtimeMs: Date.now(),
       ino,
+      uid,
+      gid,
     };
     let entry = new Map();
     entry.set(STAT, stat);
@@ -229,6 +245,7 @@ module.exports = class CacheFS {
   }
   symlink(target, filepath) {
     let ino, mode;
+    const uid = this._uid, gid = this._gid;
     try {
       let oldStat = this.stat(filepath);
       if (mode === null) {
@@ -251,11 +268,24 @@ module.exports = class CacheFS {
       size: 0,
       mtimeMs: Date.now(),
       ino,
+      uid,
+      gid,
     };
     let entry = new Map();
     entry.set(STAT, stat);
     dir.set(basename, entry);
     return stat;
+  }
+  chmod(filepath, mode) {
+    let stat = this.stat(filepath);
+    stat.mode = mode;
+    stat.ctimeMs = Date.now();
+  }
+  chown(filepath, uid, gid) {
+    let stat = this.stat(filepath);
+    stat.uid = uid;
+    stat.gid = gid;
+    stat.ctimeMs = Date.now();
   }
   _du (dir) {
     let size = 0;

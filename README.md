@@ -71,6 +71,8 @@ Options object:
 | `defer`         | boolean = false    | If true, avoids mutex contention during initialization                                                                                                                                     |
 | `db`            | IDB                | Replacement for DB object that hold Filesystem data. It's low level replacement for `backend` option.  |
 | `backend`       | IBackend           | If present, none of the other arguments (except `defer`) have any effect, and instead of using the normal LightningFS stuff, LightningFS acts as a wrapper around the provided custom backend. |
+| `uid`           | number = 1         | Default owner user ID assigned to newly created files and directories, similar to a process's effective uid in Node.js. Can be overridden per file/directory with `fs.chown`. |
+| `gid`           | number = 1         | Default owner group ID assigned to newly created files and directories, similar to a process's effective gid in Node.js. Can be overridden per file/directory with `fs.chown`. |
 
 
 #### Advanced usage
@@ -100,6 +102,8 @@ Options object:
 | ------ | ---------------- | ---------------------- |
 | `mode` | number = 0o777   | Posix mode permissions |
 
+New directories are always owned by the `uid`/`gid` the `FS` was constructed with; use `fs.chown` to change ownership afterwards.
+
 ### `fs.rmdir(filepath, opts?, cb)`
 
 Remove directory
@@ -122,6 +126,8 @@ Options object:
 | ---------- | ------------------ | -------------------------------- |
 | `mode`     | number = 0o777     | Posix mode permissions           |
 | `encoding` | string = undefined | Only supported value is `'utf8'` |
+
+New files are owned by the `uid`/`gid` the `FS` was constructed with; overwriting an existing file preserves its current owner. Use `fs.chown` to change ownership.
 
 ### `fs.readFile(filepath, opts?, cb)`
 
@@ -154,8 +160,8 @@ The included properties are:
 - `ino`
 - `mtimeMs`
 - `ctimeMs`
-- `uid` (fixed value of 1)
-- `gid` (fixed value of 1)
+- `uid` (defaults to 1, or the `uid` the `FS` was constructed with)
+- `gid` (defaults to 1, or the `gid` the `FS` was constructed with)
 - `dev` (fixed value of 1)
 
 The included methods are:
@@ -169,11 +175,19 @@ Like `fs.stat` except that paths to symlinks return the symlink stats not the fi
 
 ### `fs.symlink(target, filepath, cb)`
 
-Create a symlink at `filepath` that points to `target`.
+Create a symlink at `filepath` that points to `target`. The symlink's `uid`/`gid` are the ones the `FS` was constructed with.
 
 ### `fs.readlink(filepath, opts?, cb)`
 
 Read the target of a symlink.
+
+### `fs.chmod(filepath, mode, cb)`
+
+Change the mode (Posix permissions) of a file or directory, like [`fs.chmod`](https://nodejs.org/api/fs.html#fschmodpath-mode-callback) in Node.js.
+
+### `fs.chown(filepath, uid, gid, cb)`
+
+Change the owner (`uid`) and group (`gid`) of a file or directory, like [`fs.chown`](https://nodejs.org/api/fs.html#fschownpath-uid-gid-callback) in Node.js.
 
 ### `fs.backFile(filepath, opts?, cb)`
 
@@ -230,6 +244,8 @@ type StatLike = {
   ino: number | string | BigInt;
   mtimeMs: number;
   ctimeMs?: number;
+  uid?: number;
+  gid?: number;
 }
 
 interface IBackend {
@@ -253,6 +269,10 @@ interface IBackend {
   // bonus - not part of the standard `fs` module
   backFile(filepath: string, opts: any): void;
   du(filepath: string): Awaited<number>;
+
+  // optional - used by fs.chmod/fs.chown
+  chmod?(filepath: string, mode: number): void; // throws ENOENT
+  chown?(filepath: string, uid: number, gid: number): void; // throws ENOENT
 
   // lifecycle - useful if your backend needs setup and teardown
   init?(name: string, opts: any): Awaited<void>; // passes initialization options
