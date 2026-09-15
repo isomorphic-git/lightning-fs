@@ -62,48 +62,32 @@ module.exports = function (config) {
     colors: true,
     // Increase timeouts since some actions take quite a while.
     browserNoActivityTimeout: 4 * 60 * 1000, // default 10000
-    // https://support.saucelabs.com/hc/en-us/articles/225104707-Karma-Tests-Disconnect-Particularly-When-Running-Tests-on-Safari
+    // Remote (BrowserStack) browsers can be slow to report activity; avoid flaky disconnects.
     browserDisconnectTimeout: 10000, // default 2000
     browserDisconnectTolerance: 0, // default 0
     captureTimeout: 4 * 60 * 1000, // default 60000
-    // SauceLabs browsers
+    // BrowserStack browsers
     customLaunchers: {
-      XXXsl_chrome: {
-        base: 'SauceLabs',
-        browserName: 'chrome',
-        extendedDebugging: true,
+      bs_edge: {
+        base: 'BrowserStack',
+        browser: 'edge',
+        browser_version: '110.0',
+        os: 'Windows',
+        os_version: '11',
       },
-      XXXsl_firefox: {
-        base: 'SauceLabs',
-        browserName: 'firefox',
+      bs_safari: {
+        base: 'BrowserStack',
+        browser: 'safari',
+        browser_version: '16.0',
+        os: 'OS X',
+        os_version: 'Ventura',
       },
-      sl_edge: {
-        base: 'SauceLabs',
-        browserName: 'MicrosoftEdge',
-        version: '79.0',
-      },
-      sl_safari: {
-        base: 'SauceLabs',
-        browserName: 'safari',
-        platform: 'macOS 11.00',
-        version: '14',
-      },
-      sl_ios_safari: {
-        base: 'SauceLabs',
-        deviceName: 'iPhone 11 Pro Max Simulator',
-        platformName: 'iOS',
-        platformVersion: '14.0',
-        browserName: 'Safari',
-        appiumVersion: '1.18.3',
-      },
-      XXXsl_android_chrome: {
-        base: 'SauceLabs',
-        deviceOrientation: 'portrait',
-        deviceName: 'Android GoogleAPI Emulator',
-        platformName: 'Android',
-        platformVersion: '7.1',
-        browserName: 'Chrome',
-        appiumVersion: '1.15.0',
+      bs_ios_safari: {
+        base: 'BrowserStack',
+        device: 'iPhone 14',
+        os: 'ios',
+        os_version: '16',
+        real_mobile: true,
       },
       bs_android_chrome: {
         base: 'BrowserStack',
@@ -126,18 +110,12 @@ module.exports = function (config) {
         flags: ['--no-sandbox'],
       },
     },
-    sauceLabs: {
-      // Since tags aren't being sent correctly, I'm going to stick the branch name in here.
-      testName: `${REPO} / ${ISSUE} / ${COMMIT}`,
-      // Note: I added the Date.now() bit so that when I can click "Restart" on a Travis job,
-      // Sauce Labs does not simply append new test results to the old set that failed, which
-      // convinces karma that it failed again and always.
-      build: process.env.BUILD_BUILDID + '-' + Date.now(),
-      // Note: it does not appear that tags are being sent correctly.
-      tags: [ISSUE],
-      recordScreenshots: false,
-      recordVideo: false,
-      public: 'public restricted',
+    browserStack: {
+      // Explicit project/build names so each run is identifiable in the
+      // BrowserStack dashboard, mirroring the naming used to previously
+      // identify SauceLabs runs.
+      project: REPO || 'lightning-fs',
+      build: `${ISSUE} / ${COMMIT} / ${process.env.BUILD_BUILDID}-${Date.now()}`,
     },
     concurrency: 5,
     // Continuous Integration mode
@@ -162,22 +140,19 @@ module.exports = function (config) {
       'karma-firefox-launcher',
       'karma-jasmine',
       'karma-junit-reporter',
-      'karma-sauce-launcher',
       'karma-verbose-reporter',
       'karma-webpack',
     ]
   }
 
-  if (!process.env.SAUCE_USERNAME) {
+  if (!process.env.BROWSER_STACK_USERNAME) {
     console.log(
-      'Skipping SauceLabs tests because SAUCE_USERNAME environment variable is not set.'
+      'Skipping BrowserStack tests because BROWSER_STACK_USERNAME environment variable is not set.'
     )
-  } else if (!process.env.SAUCE_ACCESS_KEY) {
+  } else if (!process.env.BROWSER_STACK_ACCESS_KEY) {
     console.log(
-      'Skipping SauceLabs tests because SAUCE_ACCESS_KEY environment variable is not set.'
+      'Skipping BrowserStack tests because BROWSER_STACK_ACCESS_KEY environment variable is not set.'
     )
-  } else {
-    options.reporters.push('saucelabs')
   }
 
   if (process.env.TEST_BROWSERS) {
