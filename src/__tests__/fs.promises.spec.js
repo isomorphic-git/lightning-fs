@@ -36,7 +36,7 @@ describe("fs.promises module", () => {
 
   describe("writeFile", () => {
     it("create file", done => {
-      fs.mkdir("/writeFile").finally(() => {
+      fs.mkdir("/writeFile").catch(() => {}).finally(() => {
         fs.writeFile("/writeFile/writeFile-uint8.txt", HELLO).then(() => {
           fs.stat("/writeFile/writeFile-uint8.txt").then(stats => {
             expect(stats.size).toEqual(5);
@@ -46,7 +46,7 @@ describe("fs.promises module", () => {
       });
     });
     it("create file (from string)", done => {
-      fs.mkdir("/writeFile").finally(() => {
+      fs.mkdir("/writeFile").catch(() => {}).finally(() => {
         fs.writeFile("/writeFile/writeFile-string.txt", "HELLO").then(() => {
           fs.stat("/writeFile/writeFile-string.txt").then(stats => {
             expect(stats.size).toEqual(5);
@@ -56,7 +56,7 @@ describe("fs.promises module", () => {
       });
     });
     it("write file perserves old inode", done => {
-      fs.mkdir("/writeFile").finally(() => {
+      fs.mkdir("/writeFile").catch(() => {}).finally(() => {
         fs.writeFile("/writeFile/writeFile-inode.txt", "HELLO").then(() => {
           fs.stat("/writeFile/writeFile-inode.txt").then(stats => {
             let inode = stats.ino;
@@ -71,7 +71,7 @@ describe("fs.promises module", () => {
       });
     });
     it("write file perserves old mode", done => {
-      fs.mkdir("/writeFile").finally(() => {
+      fs.mkdir("/writeFile").catch(() => {}).finally(() => {
         fs.writeFile("/writeFile/writeFile-mode.txt", "HELLO", { mode: 0o635 }).then(() => {
           fs.stat("/writeFile/writeFile-mode.txt").then(stats => {
             let mode = stats.mode;
@@ -87,7 +87,7 @@ describe("fs.promises module", () => {
       });
     });
     it("write file in place of an existing directory throws", done => {
-      fs.mkdir("/writeFile").finally(() => {
+      fs.mkdir("/writeFile").catch(() => {}).finally(() => {
         fs.writeFile("/writeFile", "HELLO")
           .then(() => {
             fail();
@@ -109,7 +109,7 @@ describe("fs.promises module", () => {
       });
     });
     it("read file", done => {
-      fs.mkdir("/readFile").finally(() => {
+      fs.mkdir("/readFile").catch(() => {}).finally(() => {
         fs.writeFile("/readFile/readFile-uint8.txt", "HELLO").then(() => {
           fs.readFile("/readFile/readFile-uint8.txt").then(data => {
             // instanceof comparisons on Uint8Array's retrieved from IDB are broken in Safari Mobile 11.x (source: https://github.com/dfahlander/Dexie.js/issues/656#issuecomment-391866600)
@@ -120,7 +120,7 @@ describe("fs.promises module", () => {
       });
     });
     it("read file (encoding shorthand)", done => {
-      fs.mkdir("/readFile").finally(() => {
+      fs.mkdir("/readFile").catch(() => {}).finally(() => {
         fs.writeFile("/readFile/readFile-encoding-shorthand.txt", "HELLO").then(() => {
           fs.readFile("/readFile/readFile-encoding-shorthand.txt", "utf8").then(data => {
             expect(data).toEqual("HELLO");
@@ -130,7 +130,7 @@ describe("fs.promises module", () => {
       });
     });
     it("read file (encoding longhand)", done => {
-      fs.mkdir("/readFile").finally(() => {
+      fs.mkdir("/readFile").catch(() => {}).finally(() => {
         fs.writeFile("/readFile/readFile-encoding-longhand.txt", "HELLO").then(() => {
           fs.readFile("/readFile/readFile-encoding-longhand.txt", { encoding: "utf8" }).then(data => {
             expect(data).toEqual("HELLO");
@@ -149,7 +149,7 @@ describe("fs.promises module", () => {
       });
     });
     it("read root directory", done => {
-      fs.mkdir("/readdir").finally(() => {
+      fs.mkdir("/readdir").catch(() => {}).finally(() => {
         fs.readdir("/").then(data => {
           expect(data.includes("readdir")).toBe(true);
           done();
@@ -157,7 +157,7 @@ describe("fs.promises module", () => {
       });
     });
     it("read child directory", done => {
-      fs.mkdir("/readdir").finally(() => {
+      fs.mkdir("/readdir").catch(() => {}).finally(() => {
         fs.writeFile("/readdir/1.txt", "").then(() => {
           fs.readdir("/readdir").then(data => {
             expect(data).toEqual(["1.txt"])
@@ -167,7 +167,7 @@ describe("fs.promises module", () => {
       });
     });
     it("read a file throws", done => {
-      fs.mkdir("/readdir2").finally(() => {
+      fs.mkdir("/readdir2").catch(() => {}).finally(() => {
         fs.writeFile("/readdir2/not-a-dir", "").then(() => {
           fs.readdir("/readdir2/not-a-dir").catch(err => {
             expect(err).not.toBe(null);
@@ -195,8 +195,8 @@ describe("fs.promises module", () => {
       });
     });
     it("delete non-empty directory fails", done => {
-      fs.mkdir("/rmdir").finally(() => {
-        fs.mkdir("/rmdir/not-empty").finally(() => {
+      fs.mkdir("/rmdir").catch(() => {}).finally(() => {
+        fs.mkdir("/rmdir/not-empty").catch(() => {}).finally(() => {
           fs.writeFile("/rmdir/not-empty/file.txt", "").then(() => {
 
             fs.rmdir("/rmdir/not-empty").catch(err => {
@@ -209,8 +209,8 @@ describe("fs.promises module", () => {
       })
     });
     it("delete empty directory", done => {
-      fs.mkdir("/rmdir").finally(() => {
-        fs.mkdir("/rmdir/empty").finally(() => {
+      fs.mkdir("/rmdir").catch(() => {}).finally(() => {
+        fs.mkdir("/rmdir/empty").catch(() => {}).finally(() => {
           fs.readdir("/rmdir").then(data => {
             let originalSize = data.length;
             fs.rmdir("/rmdir/empty").then(() => {
@@ -225,7 +225,7 @@ describe("fs.promises module", () => {
       });
     });
     it("delete a file throws", done => {
-      fs.mkdir("/rmdir").finally(() => {
+      fs.mkdir("/rmdir").catch(() => {}).finally(() => {
         fs.writeFile("/rmdir/not-a-dir", "").then(() => {
           fs.rmdir("/rmdir/not-a-dir").catch(err => {
             expect(err).not.toBe(null);
@@ -239,7 +239,7 @@ describe("fs.promises module", () => {
 
   describe("unlink", () => {
     it("create and delete file", done => {
-      fs.mkdir("/unlink").finally(() => {
+      fs.mkdir("/unlink").catch(() => {}).finally(() => {
         fs.writeFile("/unlink/file.txt", "").then(() => {
           fs.readdir("/unlink").then(data => {
             let originalSize = data.length;
@@ -262,7 +262,7 @@ describe("fs.promises module", () => {
 
   describe("rename", () => {
     it("create and rename file", done => {
-      fs.mkdir("/rename").finally(() => {
+      fs.mkdir("/rename").catch(() => {}).finally(() => {
         fs.writeFile("/rename/a.txt", "").then(() => {
           fs.rename("/rename/a.txt", "/rename/b.txt").then(() => {
             fs.readdir("/rename").then(data => {
@@ -282,8 +282,8 @@ describe("fs.promises module", () => {
       });
     });
     it("create and rename directory", done => {
-      fs.mkdir("/rename").finally(() => {
-        fs.mkdir("/rename/a").finally(() => {
+      fs.mkdir("/rename").catch(() => {}).finally(() => {
+        fs.mkdir("/rename/a").catch(() => {}).finally(() => {
           fs.writeFile("/rename/a/file.txt", "").then(() => {
             fs.rename("/rename/a", "/rename/b").then(() => {
               fs.readdir("/rename").then(data => {
@@ -307,7 +307,7 @@ describe("fs.promises module", () => {
 
   describe("symlink", () => {
     it("symlink a file and read/write to it", done => {
-      fs.mkdir("/symlink").finally(() => {
+      fs.mkdir("/symlink").catch(() => {}).finally(() => {
         fs.writeFile("/symlink/a.txt", "hello").then(() => {
           fs.symlink("/symlink/a.txt", "/symlink/b.txt").then(() => {
             fs.readFile("/symlink/b.txt", "utf8").then(data => {
@@ -324,7 +324,7 @@ describe("fs.promises module", () => {
       });
     });
     it("symlink a file and read/write to it (relative)", done => {
-      fs.mkdir("/symlink").finally(() => {
+      fs.mkdir("/symlink").catch(() => {}).finally(() => {
         fs.writeFile("/symlink/a.txt", "hello").then(() => {
           fs.symlink("a.txt", "/symlink/b.txt").then(() => {
             fs.readFile("/symlink/b.txt", "utf8").then(data => {
@@ -341,8 +341,8 @@ describe("fs.promises module", () => {
       });
     });
     it("symlink a directory and read/write to it", done => {
-      fs.mkdir("/symlink").finally(() => {
-        fs.mkdir("/symlink/a").finally(() => {
+      fs.mkdir("/symlink").catch(() => {}).finally(() => {
+        fs.mkdir("/symlink/a").catch(() => {}).finally(() => {
           fs.writeFile("/symlink/a/file.txt", "data").then(() => {
             fs.symlink("/symlink/a", "/symlink/b").then(() => {
               fs.readdir("/symlink/b").then(data => {
@@ -363,9 +363,9 @@ describe("fs.promises module", () => {
       });
     });
     it("symlink a directory and read/write to it (relative)", done => {
-      fs.mkdir("/symlink").finally(() => {
-        fs.mkdir("/symlink/a").finally(() => {
-          fs.mkdir("/symlink/b").finally(() => {
+      fs.mkdir("/symlink").catch(() => {}).finally(() => {
+        fs.mkdir("/symlink/a").catch(() => {}).finally(() => {
+          fs.mkdir("/symlink/b").catch(() => {}).finally(() => {
             fs.writeFile("/symlink/a/file.txt", "data").then(() => {
               fs.symlink("../a", "/symlink/b/c").then(() => {
                 fs.readdir("/symlink/b/c").then(data => {
@@ -387,8 +387,8 @@ describe("fs.promises module", () => {
       });
     });
     it("unlink doesn't follow symlinks", done => {
-      fs.mkdir("/symlink").finally(() => {
-        fs.mkdir("/symlink/del").finally(() => {
+      fs.mkdir("/symlink").catch(() => {}).finally(() => {
+        fs.mkdir("/symlink/del").catch(() => {}).finally(() => {
           fs.writeFile("/symlink/del/file.txt", "data").then(() => {
             fs.symlink("/symlink/del/file.txt", "/symlink/del/file2.txt").then(() => {
               fs.readdir("/symlink/del").then(data => {
@@ -411,8 +411,8 @@ describe("fs.promises module", () => {
       });
     });
     it("lstat doesn't follow symlinks", done => {
-      fs.mkdir("/symlink").finally(() => {
-        fs.mkdir("/symlink/lstat").finally(() => {
+      fs.mkdir("/symlink").catch(() => {}).finally(() => {
+        fs.mkdir("/symlink/lstat").catch(() => {}).finally(() => {
           fs.writeFile("/symlink/lstat/file.txt", "data").then(() => {
             fs.symlink("/symlink/lstat/file.txt", "/symlink/lstat/file2.txt").then(() => {
               fs.stat("/symlink/lstat/file2.txt").then(stat => {
@@ -433,7 +433,7 @@ describe("fs.promises module", () => {
 
   describe("readlink", () => {
     it("readlink returns the target path", done => {
-      fs.mkdir("/readlink").finally(() => {
+      fs.mkdir("/readlink").catch(() => {}).finally(() => {
         fs.writeFile("/readlink/a.txt", "hello").then(() => {
           fs.symlink("/readlink/a.txt", "/readlink/b.txt").then(() => {
             fs.readlink("/readlink/b.txt", "utf8").then(data => {
@@ -445,7 +445,7 @@ describe("fs.promises module", () => {
       });
     });
     it("readlink operates on paths with symlinks", done => {
-      fs.mkdir("/readlink").finally(() => {
+      fs.mkdir("/readlink").catch(() => {}).finally(() => {
         fs.symlink("/readlink", "/readlink/sub").then(() => {
           fs.writeFile("/readlink/c.txt", "hello").then(() => {
             fs.symlink("/readlink/c.txt", "/readlink/d.txt").then(() => {
@@ -462,7 +462,7 @@ describe("fs.promises module", () => {
 
   describe("du", () => {
     it("du returns the total file size of a path", done => {
-      fs.mkdir("/du").finally(() => {
+      fs.mkdir("/du").catch(() => {}).finally(() => {
         fs.writeFile("/du/a.txt", "hello").then(() => {
           fs.writeFile("/du/b.txt", "hello").then(() => {
             fs.mkdir("/du/sub").then(() => {
