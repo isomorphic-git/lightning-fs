@@ -1,6 +1,7 @@
 import FS from "../index.js";
 
 const fs = new FS("testfs-promises", { wipe: true }).promises;
+const fsOwner = new FS("testfs-promises-owner", { wipe: true, uid: 42, gid: 43 }).promises;
 
 const HELLO = new Uint8Array([72, 69, 76, 76, 79]);
 
@@ -480,6 +481,57 @@ describe("fs.promises module", () => {
                 });
               });
             });
+          });
+        });
+      });
+    });
+  });
+
+  describe("ownership", () => {
+    it("stat defaults to uid/gid 1 when not configured", done => {
+      fs.writeFile("/ownership-default.txt", "HELLO").then(() => {
+        fs.stat("/ownership-default.txt").then(stats => {
+          expect(stats.uid).toEqual(1);
+          expect(stats.gid).toEqual(1);
+          done();
+        });
+      });
+    });
+    it("new files use the uid/gid configured on the fs instance", done => {
+      fsOwner.writeFile("/ownership-file.txt", "HELLO").then(() => {
+        fsOwner.stat("/ownership-file.txt").then(stats => {
+          expect(stats.uid).toEqual(42);
+          expect(stats.gid).toEqual(43);
+          done();
+        });
+      });
+    });
+    it("new directories use the uid/gid configured on the fs instance", done => {
+      fsOwner.mkdir("/ownership-dir").then(() => {
+        fsOwner.stat("/ownership-dir").then(stats => {
+          expect(stats.uid).toEqual(42);
+          expect(stats.gid).toEqual(43);
+          done();
+        });
+      });
+    });
+    it("chmod changes the mode of a file", done => {
+      fs.writeFile("/chmod.txt", "HELLO").then(() => {
+        fs.chmod("/chmod.txt", 0o600).then(() => {
+          fs.stat("/chmod.txt").then(stats => {
+            expect(stats.mode).toEqual(0o600);
+            done();
+          });
+        });
+      });
+    });
+    it("chown changes the uid/gid of a file", done => {
+      fs.writeFile("/chown.txt", "HELLO").then(() => {
+        fs.chown("/chown.txt", 7, 8).then(() => {
+          fs.stat("/chown.txt").then(stats => {
+            expect(stats.uid).toEqual(7);
+            expect(stats.gid).toEqual(8);
+            done();
           });
         });
       });

@@ -1,4 +1,4 @@
-importScripts('http://localhost:9876/base/dist/lightning-fs.min.js');
+importScripts(location.origin + '/base/dist/lightning-fs.min.js');
 
 self.fs = new LightningFS("testfs-worker").promises;
 

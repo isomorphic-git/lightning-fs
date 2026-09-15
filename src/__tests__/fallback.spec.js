@@ -1,6 +1,6 @@
 import FS from "../index.js";
 
-const fs = new FS("fallbackfs", { wipe: true, url: 'http://localhost:9876/base/src/__tests__/__fixtures__/test-folder' });
+const fs = new FS("fallbackfs", { wipe: true, url: `${location.origin}/base/src/__tests__/__fixtures__/test-folder` });
 
 describe("http fallback", () => {
   it("sanity check", () => {
@@ -103,6 +103,20 @@ describe("http fallback", () => {
       fs.backFile("/backFile/non-existant.txt", (err, data) => {
         expect(err).not.toBe(null);
         done();
+      });
+    });
+    it("backing an already-backed file preserves its chown'd owner", done => {
+      fs.chown("/a.txt", 7, 8, (err) => {
+        expect(err).toBe(null);
+        fs.backFile("/a.txt", (err) => {
+          expect(err).toBe(null);
+          fs.stat("/a.txt", (err, stats) => {
+            expect(err).toBe(null);
+            expect(stats.uid).toEqual(7);
+            expect(stats.gid).toEqual(8);
+            done();
+          });
+        });
       });
     });
     it("backing a file makes it readable", done => {

@@ -11,18 +11,18 @@ concurrency:
 
 jobs:
   build:
-    name: Build (Node.js v18)
+    name: Build (Node.js v24)
     runs-on: ubuntu-latest
 
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7.0.0
         with:
-          node-version: 18
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -38,13 +38,11 @@ jobs:
         env:
           BROWSER_STACK_ACCESS_KEY: ${{ secrets.BROWSER_STACK_ACCESS_KEY }}
           BROWSER_STACK_USERNAME: ${{ secrets.BROWSER_STACK_USERNAME }}
-          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
-          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
-          TEST_BROWSERS: 'ChromeHeadlessNoSandbox,FirefoxHeadless,sl_edge,sl_safari,sl_ios_safari,bs_android_chrome'
+          TEST_BROWSERS: 'ChromeHeadlessNoSandbox,FirefoxHeadless,bs_edge,bs_safari,bs_ios_safari,bs_android_chrome'
 
       - name: Save test results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: test-results-jest
           path: junit/*.xml
@@ -56,7 +54,7 @@ jobs:
 
       - name: Save npm-tarball.tgz
         if: ${{ !cancelled() && !github.event.pull_request.head.repo.fork }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: npm-tarball.tgz
           path: isomorphic-git-lightning-fs-0.0.0-development.tgz

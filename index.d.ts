@@ -113,6 +113,23 @@ declare module '@isomorphic-git/lightning-fs' {
      */
     du(filepath: string, cb: (err: Error, size: number) => void): void
 
+    /**
+     * Change the mode (Posix permissions) of a file or directory.
+     * @param filepath
+     * @param mode
+     * @param cb
+     */
+    chmod(filepath: string, mode: number, cb: (err: Error | null) => void): void
+
+    /**
+     * Change the owner (uid) and group (gid) of a file or directory.
+     * @param filepath
+     * @param uid
+     * @param gid
+     * @param cb
+     */
+    chown(filepath: string, uid: number, gid: number, cb: (err: Error | null) => void): void
+
     readonly promises: FS.PromisifiedFS
   }
   namespace FS {
@@ -213,6 +230,21 @@ declare module '@isomorphic-git/lightning-fs' {
        * @returns Promise that resolves when super block is saved to file
        */
        flush(): Promise<void>
+
+      /**
+       * Change the mode (Posix permissions) of a file or directory.
+       * @param filepath
+       * @param mode
+       */
+      chmod(filepath: string, mode: number): Promise<void>
+
+      /**
+       * Change the owner (uid) and group (gid) of a file or directory.
+       * @param filepath
+       * @param uid
+       * @param gid
+       */
+      chown(filepath: string, uid: number, gid: number): Promise<void>
     }
 
     export interface Options {
@@ -257,6 +289,16 @@ declare module '@isomorphic-git/lightning-fs' {
        * @default null
        */
       db?: FS.IDB
+      /**
+       * Default owner user ID assigned to newly created files and directories
+       * @default 1
+       */
+      uid?: number
+      /**
+       * Default owner group ID assigned to newly created files and directories
+       * @default 1
+       */
+      gid?: number
     }
     export interface IDB {
       saveSuperblock(sb: Uint8Array): TypeOrPromise<void>
@@ -293,8 +335,8 @@ declare module '@isomorphic-git/lightning-fs' {
       ino: any
       mtimeMs: any
       ctimeMs: any
-      uid: 1
-      gid: 1
+      uid: number
+      gid: number
       dev: 1
       isFile(): boolean
       isDirectory(): boolean

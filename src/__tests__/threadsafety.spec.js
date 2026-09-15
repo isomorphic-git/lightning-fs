@@ -12,7 +12,7 @@ describe("thread safety", () => {
       expect(files.length).toBe(0);
       for (let i = 1; i <= numWorkers; i++) {
         let promise = new Promise(resolve => {
-          let worker = new Worker('http://localhost:9876/base/src/__tests__/threadsafety.worker.js', {name: `worker_${i}`})
+          let worker = new Worker(`${location.origin}/base/src/__tests__/threadsafety.worker.js`, {name: `worker_${i}`})
           worker.onmessage = (e) => {
             if (e.data && e.data.message === 'COMPLETE') resolve()
           }

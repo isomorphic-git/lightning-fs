@@ -6,8 +6,8 @@ module.exports = class Stat {
     this.ino = stats.ino;
     this.mtimeMs = stats.mtimeMs;
     this.ctimeMs = stats.ctimeMs || stats.mtimeMs;
-    this.uid = 1;
-    this.gid = 1;
+    this.uid = stats.uid == null ? 1 : stats.uid;
+    this.gid = stats.gid == null ? 1 : stats.gid;
     this.dev = 1;
   }
   isFile() {
