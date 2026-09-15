@@ -1,6 +1,6 @@
 import FS from "../index.js";
 
-const fs = new FS("fallbackfs", { wipe: true, url: 'http://localhost:9876/base/src/__tests__/__fixtures__/test-folder' });
+const fs = new FS("fallbackfs", { wipe: true, url: `${location.origin}/base/src/__tests__/__fixtures__/test-folder` });
 
 describe("http fallback", () => {
   it("sanity check", () => {
