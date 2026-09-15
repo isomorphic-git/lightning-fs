@@ -119,7 +119,7 @@ declare module '@isomorphic-git/lightning-fs' {
      * @param mode
      * @param cb
      */
-    chmod(filepath: string, mode: number, cb: (err: Error) => void): void
+    chmod(filepath: string, mode: number, cb: (err: Error | null) => void): void
 
     /**
      * Change the owner (uid) and group (gid) of a file or directory.
@@ -128,7 +128,7 @@ declare module '@isomorphic-git/lightning-fs' {
      * @param gid
      * @param cb
      */
-    chown(filepath: string, uid: number, gid: number, cb: (err: Error) => void): void
+    chown(filepath: string, uid: number, gid: number, cb: (err: Error | null) => void): void
 
     readonly promises: FS.PromisifiedFS
   }
