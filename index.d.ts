@@ -130,6 +130,23 @@ declare module '@isomorphic-git/lightning-fs' {
      */
     chown(filepath: string, uid: number, gid: number, cb: (err: Error | null) => void): void
 
+    /**
+     * Copy a file or, with `recursive: true`, a directory tree, like [`fs.cp`](https://nodejs.org/api/fs.html#fscpsrc-dest-options-callback) in Node.js.
+     * @param oldFilepath
+     * @param newFilepath
+     * @param cb
+     */
+    cp(oldFilepath: string, newFilepath: string, cb: (err: Error | null) => void): void
+
+    /**
+     * Copy a file or, with `recursive: true`, a directory tree, like [`fs.cp`](https://nodejs.org/api/fs.html#fscpsrc-dest-options-callback) in Node.js.
+     * @param oldFilepath
+     * @param newFilepath
+     * @param options
+     * @param cb
+     */
+    cp(oldFilepath: string, newFilepath: string, options: FS.CpOptions | undefined, cb: (err: Error | null) => void): void
+
     readonly promises: FS.PromisifiedFS
   }
   namespace FS {
@@ -245,6 +262,14 @@ declare module '@isomorphic-git/lightning-fs' {
        * @param gid
        */
       chown(filepath: string, uid: number, gid: number): Promise<void>
+
+      /**
+       * Copy a file or, with `recursive: true`, a directory tree, like [`fs.promises.cp`](https://nodejs.org/api/fs.html#fspromisescpsrc-dest-options) in Node.js.
+       * @param oldFilepath
+       * @param newFilepath
+       * @param options
+       */
+      cp(oldFilepath: string, newFilepath: string, options?: FS.CpOptions): Promise<void>
     }
 
     export interface Options {
@@ -341,6 +366,33 @@ declare module '@isomorphic-git/lightning-fs' {
       isFile(): boolean
       isDirectory(): boolean
       isSymbolicLink(): boolean
+    }
+    export interface CpOptions {
+      /**
+       * Copy directories recursively
+       * @default false
+       */
+      recursive?: boolean
+      /**
+       * Overwrite an existing file or symlink at the destination
+       * @default true
+       */
+      force?: boolean
+      /**
+       * When `force` is false and the destination exists, throw an error instead of skipping it.
+       * Has no effect when `force` is true (the default) — the destination is always overwritten.
+       * @default false
+       */
+      errorOnExist?: boolean
+      /**
+       * Dereference symlinks in the source instead of copying the link itself
+       * @default false
+       */
+      dereference?: boolean
+      /**
+       * Function called for each copied path; return false to skip it
+       */
+      filter?: (src: string, dest: string) => boolean | Promise<boolean>
     }
     export interface BackFileOptions {
       /**
