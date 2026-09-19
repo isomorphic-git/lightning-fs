@@ -134,6 +134,14 @@ declare module '@isomorphic-git/lightning-fs' {
      * Copy a file or, with `recursive: true`, a directory tree, like [`fs.cp`](https://nodejs.org/api/fs.html#fscpsrc-dest-options-callback) in Node.js.
      * @param oldFilepath
      * @param newFilepath
+     * @param cb
+     */
+    cp(oldFilepath: string, newFilepath: string, cb: (err: Error | null) => void): void
+
+    /**
+     * Copy a file or, with `recursive: true`, a directory tree, like [`fs.cp`](https://nodejs.org/api/fs.html#fscpsrc-dest-options-callback) in Node.js.
+     * @param oldFilepath
+     * @param newFilepath
      * @param options
      * @param cb
      */
