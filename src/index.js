@@ -33,6 +33,7 @@ module.exports = class FS {
     this.flush = this.flush.bind(this)
     this.chmod = this.chmod.bind(this)
     this.chown = this.chown.bind(this)
+    this.cp = this.cp.bind(this)
   }
   init(name, options) {
     return this.promises.init(name, options)
@@ -100,6 +101,10 @@ module.exports = class FS {
   chown(filepath, uid, gid, cb) {
     const [resolve, reject] = wrapCallback(cb);
     this.promises.chown(filepath, uid, gid).then(resolve).catch(reject);
+  }
+  cp(oldFilepath, newFilepath, opts, cb) {
+    const [resolve, reject] = wrapCallback(opts, cb);
+    this.promises.cp(oldFilepath, newFilepath, opts).then(resolve).catch(reject);
   }
 }
 

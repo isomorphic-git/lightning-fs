@@ -2,7 +2,7 @@ const { encode, decode } = require("isomorphic-textencoder");
 const debounce = require("just-debounce-it");
 
 const CacheFS = require("./CacheFS.js");
-const { ENOENT, ENOTEMPTY, ETIMEDOUT } = require("./errors.js");
+const { EEXIST, EISDIR, ENOENT, ENOTEMPTY, ETIMEDOUT } = require("./errors.js");
 const IdbBackend = require("./IdbBackend.js");
 const HttpBackend = require("./HttpBackend.js")
 const Mutex = require("./Mutex.js");
@@ -180,6 +180,64 @@ module.exports = class DefaultBackend {
   }
   chown(filepath, uid, gid) {
     this._cache.chown(filepath, uid, gid);
+  }
+  _exists(filepath) {
+    try {
+      this._cache.lstat(filepath);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+  async cp(oldFilepath, newFilepath, opts = {}) {
+    const {
+      recursive = false,
+      force = true,
+      errorOnExist = false,
+      dereference = false,
+      filter,
+    } = opts;
+    if (newFilepath === oldFilepath || newFilepath.startsWith(oldFilepath + "/")) {
+      throw new Error(`ERR_FS_CP_EINVAL: cannot copy "${oldFilepath}" into itself "${newFilepath}"`);
+    }
+    await this._cpOne(oldFilepath, newFilepath, { recursive, force, errorOnExist, dereference, filter });
+  }
+  async _cpOne(src, dest, opts) {
+    if (opts.filter && (await opts.filter(src, dest)) === false) return;
+
+    const srcStat = opts.dereference ? this._cache.stat(src) : this._cache.lstat(src);
+
+    if (srcStat.type === "symlink") {
+      const target = this._cache.readlink(src);
+      if (this._exists(dest)) {
+        if (opts.errorOnExist) throw new EEXIST(dest);
+        if (!opts.force) return;
+        this._cache.unlink(dest);
+      }
+      this._cache.symlink(target, dest);
+      return;
+    }
+
+    if (srcStat.type === "dir") {
+      if (!opts.recursive) throw new EISDIR(src);
+      if (!this._exists(dest)) {
+        this._cache.mkdir(dest, { mode: srcStat.mode });
+      }
+      for (const entry of this._cache.readdir(src)) {
+        await this._cpOne(path.join(src, entry), path.join(dest, entry), opts);
+      }
+      return;
+    }
+
+    if (this._exists(dest)) {
+      if (opts.errorOnExist) throw new EEXIST(dest);
+      if (!opts.force) return;
+    }
+    // Copy the raw bytes directly from/to the underlying storage, bypassing
+    // the utf8 encode/decode that the higher-level readFile/writeFile do.
+    const data = await this._idb.readFile(srcStat.ino);
+    const stat = this._cache.writeStat(dest, srcStat.size, { mode: srcStat.mode });
+    await this._idb.writeFile(stat.ino, data);
   }
   async backFile(filepath, opts) {
     let size = await this._http.sizeFile(filepath)

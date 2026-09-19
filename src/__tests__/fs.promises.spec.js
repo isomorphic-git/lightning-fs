@@ -460,6 +460,106 @@ describe("fs.promises module", () => {
     });
   });
 
+  describe("cp", () => {
+    it("copies a file's contents to a new path", async () => {
+      await fs.mkdir("/cp").catch(() => {});
+      await fs.writeFile("/cp/src.txt", "HELLO");
+      await fs.cp("/cp/src.txt", "/cp/dest.txt");
+      const data = await fs.readFile("/cp/dest.txt", "utf8");
+      expect(data).toBe("HELLO");
+    });
+    it("copy is independent from the source afterwards", async () => {
+      await fs.mkdir("/cp").catch(() => {});
+      await fs.writeFile("/cp/indep-src.txt", "HELLO");
+      await fs.cp("/cp/indep-src.txt", "/cp/indep-dest.txt");
+      await fs.writeFile("/cp/indep-dest.txt", "GOODBYE");
+      const src = await fs.readFile("/cp/indep-src.txt", "utf8");
+      expect(src).toBe("HELLO");
+    });
+    it("preserves the mode of the source file", async () => {
+      await fs.mkdir("/cp").catch(() => {});
+      await fs.writeFile("/cp/mode-src.txt", "HELLO", { mode: 0o600 });
+      await fs.cp("/cp/mode-src.txt", "/cp/mode-dest.txt");
+      const stat = await fs.stat("/cp/mode-dest.txt");
+      expect(stat.mode).toEqual(0o600);
+    });
+    it("throws EISDIR copying a directory without recursive", async () => {
+      await fs.mkdir("/cp-dir-noopt").catch(() => {});
+      await fs.writeFile("/cp-dir-noopt/a.txt", "HELLO");
+      let err = null;
+      try {
+        await fs.cp("/cp-dir-noopt", "/cp-dir-noopt-dest");
+      } catch (e) {
+        err = e;
+      }
+      expect(err).not.toBe(null);
+      expect(err.code).toEqual("EISDIR");
+    });
+    it("copies a directory tree recursively", async () => {
+      await fs.mkdir("/cp-dir").catch(() => {});
+      await fs.mkdir("/cp-dir/sub").catch(() => {});
+      await fs.writeFile("/cp-dir/a.txt", "HELLO");
+      await fs.writeFile("/cp-dir/sub/b.txt", "WORLD");
+      await fs.cp("/cp-dir", "/cp-dir-dest", { recursive: true });
+      const a = await fs.readFile("/cp-dir-dest/a.txt", "utf8");
+      const b = await fs.readFile("/cp-dir-dest/sub/b.txt", "utf8");
+      expect(a).toBe("HELLO");
+      expect(b).toBe("WORLD");
+    });
+    it("throws EEXIST when errorOnExist is set and destination exists", async () => {
+      await fs.mkdir("/cp").catch(() => {});
+      await fs.writeFile("/cp/exist-src.txt", "HELLO");
+      await fs.writeFile("/cp/exist-dest.txt", "ALREADY THERE");
+      let err = null;
+      try {
+        await fs.cp("/cp/exist-src.txt", "/cp/exist-dest.txt", { errorOnExist: true });
+      } catch (e) {
+        err = e;
+      }
+      expect(err).not.toBe(null);
+      expect(err.code).toEqual("EEXIST");
+      const dest = await fs.readFile("/cp/exist-dest.txt", "utf8");
+      expect(dest).toBe("ALREADY THERE");
+    });
+    it("skips existing files when force is false", async () => {
+      await fs.mkdir("/cp").catch(() => {});
+      await fs.writeFile("/cp/force-src.txt", "HELLO");
+      await fs.writeFile("/cp/force-dest.txt", "ALREADY THERE");
+      await fs.cp("/cp/force-src.txt", "/cp/force-dest.txt", { force: false });
+      const dest = await fs.readFile("/cp/force-dest.txt", "utf8");
+      expect(dest).toBe("ALREADY THERE");
+    });
+    it("skips paths rejected by filter", async () => {
+      await fs.mkdir("/cp-filter").catch(() => {});
+      await fs.writeFile("/cp-filter/keep.txt", "KEEP");
+      await fs.writeFile("/cp-filter/skip.txt", "SKIP");
+      await fs.cp("/cp-filter", "/cp-filter-dest", {
+        recursive: true,
+        filter: (src) => !src.endsWith("skip.txt"),
+      });
+      const keep = await fs.readFile("/cp-filter-dest/keep.txt", "utf8");
+      expect(keep).toBe("KEEP");
+      let err = null;
+      try {
+        await fs.stat("/cp-filter-dest/skip.txt");
+      } catch (e) {
+        err = e;
+      }
+      expect(err).not.toBe(null);
+      expect(err.code).toEqual("ENOENT");
+    });
+    it("throws when copying a directory into itself", async () => {
+      await fs.mkdir("/cp-self").catch(() => {});
+      let err = null;
+      try {
+        await fs.cp("/cp-self", "/cp-self/inner", { recursive: true });
+      } catch (e) {
+        err = e;
+      }
+      expect(err).not.toBe(null);
+    });
+  });
+
   describe("du", () => {
     it("du returns the total file size of a path", done => {
       fs.mkdir("/du").finally(() => {
