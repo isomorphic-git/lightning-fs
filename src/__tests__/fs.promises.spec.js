@@ -506,13 +506,13 @@ describe("fs.promises module", () => {
       expect(a).toBe("HELLO");
       expect(b).toBe("WORLD");
     });
-    it("throws EEXIST when errorOnExist is set and destination exists", async () => {
+    it("throws EEXIST when force is false and errorOnExist is set and destination exists", async () => {
       await fs.mkdir("/cp").catch(() => {});
       await fs.writeFile("/cp/exist-src.txt", "HELLO");
       await fs.writeFile("/cp/exist-dest.txt", "ALREADY THERE");
       let err = null;
       try {
-        await fs.cp("/cp/exist-src.txt", "/cp/exist-dest.txt", { errorOnExist: true });
+        await fs.cp("/cp/exist-src.txt", "/cp/exist-dest.txt", { force: false, errorOnExist: true });
       } catch (e) {
         err = e;
       }
@@ -528,6 +528,14 @@ describe("fs.promises module", () => {
       await fs.cp("/cp/force-src.txt", "/cp/force-dest.txt", { force: false });
       const dest = await fs.readFile("/cp/force-dest.txt", "utf8");
       expect(dest).toBe("ALREADY THERE");
+    });
+    it("overwrites the destination by default even when errorOnExist is set (force defaults to true)", async () => {
+      await fs.mkdir("/cp").catch(() => {});
+      await fs.writeFile("/cp/default-force-src.txt", "HELLO");
+      await fs.writeFile("/cp/default-force-dest.txt", "ALREADY THERE");
+      await fs.cp("/cp/default-force-src.txt", "/cp/default-force-dest.txt", { errorOnExist: true });
+      const dest = await fs.readFile("/cp/default-force-dest.txt", "utf8");
+      expect(dest).toBe("HELLO");
     });
     it("skips paths rejected by filter", async () => {
       await fs.mkdir("/cp-filter").catch(() => {});
@@ -557,6 +565,22 @@ describe("fs.promises module", () => {
         err = e;
       }
       expect(err).not.toBe(null);
+    });
+    it("throws when copying the root directory anywhere", async () => {
+      let err = null;
+      try {
+        await fs.cp("/", "/cp-root-dest", { recursive: true });
+      } catch (e) {
+        err = e;
+      }
+      expect(err).not.toBe(null);
+    });
+    it("creates missing destination parent directories during a recursive copy", async () => {
+      await fs.mkdir("/cp-nested-src").catch(() => {});
+      await fs.writeFile("/cp-nested-src/a.txt", "HELLO");
+      await fs.cp("/cp-nested-src", "/cp-nested/does/not/exist/yet", { recursive: true });
+      const data = await fs.readFile("/cp-nested/does/not/exist/yet/a.txt", "utf8");
+      expect(data).toBe("HELLO");
     });
   });
 

@@ -371,7 +371,8 @@ declare module '@isomorphic-git/lightning-fs' {
        */
       force?: boolean
       /**
-       * Throw an error if the destination already exists
+       * When `force` is false and the destination exists, throw an error instead of skipping it.
+       * Has no effect when `force` is true (the default) — the destination is always overwritten.
        * @default false
        */
       errorOnExist?: boolean

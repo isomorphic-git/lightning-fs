@@ -197,9 +197,9 @@ Options object:
 
 | Param          | Type [= default] | Description                                                          |
 | -------------- | ---------------- | ---------------------------------------------------------------------|
-| `recursive`    | boolean = false  | Copy directories recursively. Required if `oldFilepath` is a directory. |
+| `recursive`    | boolean = false  | Copy directories recursively. Required if `oldFilepath` is a directory. Missing destination ancestor directories are created automatically. |
 | `force`        | boolean = true   | Overwrite the destination if it already exists.                      |
-| `errorOnExist` | boolean = false  | Throw `EEXIST` instead of overwriting when the destination exists (only applies when `force` is also considered). |
+| `errorOnExist` | boolean = false  | When `force` is `false` and the destination exists, throw `EEXIST` instead of silently skipping it. Has no effect when `force` is `true` (the default) — the destination is always overwritten in that case, matching Node.js. |
 | `dereference`  | boolean = false  | Copy the target of symlinks in the source instead of the symlink itself. |
 | `filter`       | function         | `(src, dest) => boolean \| Promise<boolean>` called for every file/directory; return `false` to skip copying that path. |
 

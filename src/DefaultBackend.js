@@ -189,6 +189,15 @@ module.exports = class DefaultBackend {
       return false;
     }
   }
+  _mkdirp(dirpath, mode = 0o777) {
+    if (dirpath === "/" || this._exists(dirpath)) return;
+    this._mkdirp(path.dirname(dirpath), 0o777);
+    try {
+      this._cache.mkdir(dirpath, { mode });
+    } catch (e) {
+      if (e.code !== "EEXIST") throw e;
+    }
+  }
   async cp(oldFilepath, newFilepath, opts = {}) {
     const {
       recursive = false,
@@ -197,7 +206,11 @@ module.exports = class DefaultBackend {
       dereference = false,
       filter,
     } = opts;
-    if (newFilepath === oldFilepath || newFilepath.startsWith(oldFilepath + "/")) {
+    // The root directory contains every path, so it can never be copied
+    // into any destination without copying it into itself.
+    const isDescendant =
+      oldFilepath === "/" ? newFilepath.startsWith("/") : newFilepath.startsWith(oldFilepath + "/");
+    if (newFilepath === oldFilepath || isDescendant) {
       throw new Error(`ERR_FS_CP_EINVAL: cannot copy "${oldFilepath}" into itself "${newFilepath}"`);
     }
     await this._cpOne(oldFilepath, newFilepath, { recursive, force, errorOnExist, dereference, filter });
@@ -208,21 +221,22 @@ module.exports = class DefaultBackend {
     const srcStat = opts.dereference ? this._cache.stat(src) : this._cache.lstat(src);
 
     if (srcStat.type === "symlink") {
-      const target = this._cache.readlink(src);
       if (this._exists(dest)) {
-        if (opts.errorOnExist) throw new EEXIST(dest);
-        if (!opts.force) return;
+        if (!opts.force) {
+          if (opts.errorOnExist) throw new EEXIST(dest);
+          return;
+        }
         this._cache.unlink(dest);
       }
+      const target = this._cache.readlink(src);
       this._cache.symlink(target, dest);
       return;
     }
 
     if (srcStat.type === "dir") {
       if (!opts.recursive) throw new EISDIR(src);
-      if (!this._exists(dest)) {
-        this._cache.mkdir(dest, { mode: srcStat.mode });
-      }
+      // Like Node's fs.cp, create any missing destination ancestor directories.
+      this._mkdirp(dest, srcStat.mode);
       for (const entry of this._cache.readdir(src)) {
         await this._cpOne(path.join(src, entry), path.join(dest, entry), opts);
       }
@@ -230,8 +244,11 @@ module.exports = class DefaultBackend {
     }
 
     if (this._exists(dest)) {
-      if (opts.errorOnExist) throw new EEXIST(dest);
-      if (!opts.force) return;
+      // errorOnExist only takes effect when force is false, matching Node's fs.cp.
+      if (!opts.force) {
+        if (opts.errorOnExist) throw new EEXIST(dest);
+        return;
+      }
     }
     // Copy the raw bytes directly from/to the underlying storage, bypassing
     // the utf8 encode/decode that the higher-level readFile/writeFile do.
