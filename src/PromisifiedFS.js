@@ -117,8 +117,13 @@ module.exports = class PromisifiedFS {
     // so I've added an option to disable that behavior.
     if (!options.defer) {
       // The fs is initially activated when constructed (in order to wipe/save the superblock)
-      // This is not awaited, because that would create a cycle.
-      this.stat('/')
+      // This is not awaited, because that would create a cycle. A backend that doesn't
+      // implement `stat` at all is a supported configuration, so we skip the call entirely
+      // in that case. Any other failure (e.g. activation errors) is still surfaced instead
+      // of being silently swallowed.
+      if (typeof this._backend.stat === "function") {
+        this.stat('/').catch(err => console.error(err))
+      }
     }
   }
   async _gracefulShutdown () {
