@@ -189,6 +189,24 @@ Change the mode (Posix permissions) of a file or directory, like [`fs.chmod`](ht
 
 Change the owner (`uid`) and group (`gid`) of a file or directory, like [`fs.chown`](https://nodejs.org/api/fs.html#fschownpath-uid-gid-callback) in Node.js.
 
+### `fs.cp(oldFilepath, newFilepath, opts?, cb)`
+
+Copy a file, or a directory tree when `recursive: true`, like [`fs.cp`](https://nodejs.org/api/fs.html#fscpsrc-dest-options-callback) in Node.js. File data is copied directly at the storage layer, without being decoded/re-encoded as text.
+
+Options object:
+
+| Param          | Type [= default] | Description                                                          |
+| -------------- | ---------------- | ---------------------------------------------------------------------|
+| `recursive`    | boolean = false  | Copy directories recursively. Required if `oldFilepath` is a directory. Missing destination ancestor directories are created automatically. |
+| `force`        | boolean = true   | Overwrite the destination if it already exists.                      |
+| `errorOnExist` | boolean = false  | When `force` is `false` and the destination exists, throw `EEXIST` instead of silently skipping it. Has no effect when `force` is `true` (the default) — the destination is always overwritten in that case, matching Node.js. |
+| `dereference`  | boolean = false  | Copy the target of symlinks in the source instead of the symlink itself. |
+| `filter`       | function         | `(src, dest) => boolean \| Promise<boolean>` called for every file/directory; return `false` to skip copying that path. |
+
+Notes / differences from Node.js:
+- `mode` (copy-mode flags like `COPYFILE_EXCL`) and `preserveTimestamps` are not supported.
+- Copying a directory into itself or one of its own subdirectories throws.
+
 ### `fs.backFile(filepath, opts?, cb)`
 
 Create or change the stat data for a file backed by HTTP.  Size is fetched with a HEAD request.  Useful when using an HTTP backend without `urlauto` set, as then files will only be readable if they have stat data.
@@ -273,6 +291,9 @@ interface IBackend {
   // optional - used by fs.chmod/fs.chown
   chmod?(filepath: string, mode: number): void; // throws ENOENT
   chown?(filepath: string, uid: number, gid: number): void; // throws ENOENT
+
+  // optional - used by fs.cp
+  cp?(oldFilepath: string, newFilepath: string, opts: any): Awaited<void>; // throws ENOENT, EEXIST, EISDIR
 
   // lifecycle - useful if your backend needs setup and teardown
   init?(name: string, opts: any): Awaited<void>; // passes initialization options

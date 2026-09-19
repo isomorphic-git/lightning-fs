@@ -40,6 +40,17 @@ function cleanParamsFilepathFilepath(oldFilepath, newFilepath, ...rest) {
   return [path.normalize(oldFilepath), path.normalize(newFilepath), ...rest];
 }
 
+function cleanParamsFilepathFilepathOpts(oldFilepath, newFilepath, opts, ...rest) {
+  // normalize paths
+  oldFilepath = path.normalize(oldFilepath);
+  newFilepath = path.normalize(newFilepath);
+  // strip out callbacks
+  if (typeof opts === "undefined" || typeof opts === "function") {
+    opts = {};
+  }
+  return [oldFilepath, newFilepath, opts, ...rest];
+}
+
 function cleanParamsFilepathMode(filepath, mode, ...rest) {
   // normalize paths
   return [path.normalize(filepath), mode, ...rest];
@@ -68,6 +79,7 @@ module.exports = class PromisifiedFS {
     this.du = this._wrap(this.du, cleanParamsFilepathOpts, false);
     this.chmod = this._wrap(this.chmod, cleanParamsFilepathMode, true)
     this.chown = this._wrap(this.chown, cleanParamsFilepathUidGid, true)
+    this.cp = this._wrap(this.cp, cleanParamsFilepathFilepathOpts, true)
 
     this._deactivationPromise = null
     this._deactivationTimeout = null
@@ -221,6 +233,10 @@ module.exports = class PromisifiedFS {
   }
   async chown(filepath, uid, gid) {
     await this._backend.chown(filepath, uid, gid);
+    return null;
+  }
+  async cp(oldFilepath, newFilepath, opts) {
+    await this._backend.cp(oldFilepath, newFilepath, opts);
     return null;
   }
   async flush() {
