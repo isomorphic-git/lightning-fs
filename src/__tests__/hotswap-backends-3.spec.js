@@ -31,4 +31,32 @@ describe("hotswap backends", () => {
     expect(ranDestroy).toBe(true);
   });
 
+  it("a backend without stat() does not trigger an unhandled rejection", async () => {
+    spyOn(console, 'error');
+    await pfs.init('testfs-no-stat', {
+      backend: {
+        init() {},
+        readFile() { return 'dummy' },
+      }
+    });
+    // let any fire-and-forget promises from init settle
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(console.error).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a failing stat() during init instead of swallowing it", async () => {
+    spyOn(console, 'error');
+    const statError = new Error('boom');
+    await pfs.init('testfs-stat-failure', {
+      backend: {
+        init() {},
+        stat() { throw statError; },
+        readFile() { return 'dummy' },
+      }
+    });
+    // let the fire-and-forget stat('/') rejection reach the catch handler
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(console.error).toHaveBeenCalledWith(statError);
+  });
+
 });
