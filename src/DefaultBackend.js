@@ -181,6 +181,12 @@ module.exports = class DefaultBackend {
   chown(filepath, uid, gid) {
     this._cache.chown(filepath, uid, gid);
   }
+  utimes(filepath, atime, mtime) {
+    this._cache.utimes(filepath, atime, mtime);
+  }
+  lutimes(filepath, atime, mtime) {
+    this._cache.lutimes(filepath, atime, mtime);
+  }
   _exists(filepath) {
     try {
       this._cache.lstat(filepath);

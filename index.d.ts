@@ -131,6 +131,24 @@ declare module '@isomorphic-git/lightning-fs' {
     chown(filepath: string, uid: number, gid: number, cb: (err: Error | null) => void): void
 
     /**
+     * Change the file system timestamps of the object referenced by filepath, following symlinks.
+     * @param filepath
+     * @param atime
+     * @param mtime
+     * @param cb
+     */
+    utimes(filepath: string, atime: FS.TimeLike, mtime: FS.TimeLike, cb: (err: Error | null) => void): void
+
+    /**
+     * Change the file system timestamps of the symlink referenced by filepath, without following it.
+     * @param filepath
+     * @param atime
+     * @param mtime
+     * @param cb
+     */
+    lutimes(filepath: string, atime: FS.TimeLike, mtime: FS.TimeLike, cb: (err: Error | null) => void): void
+
+    /**
      * Copy a file or, with `recursive: true`, a directory tree, like [`fs.cp`](https://nodejs.org/api/fs.html#fscpsrc-dest-options-callback) in Node.js.
      * @param oldFilepath
      * @param newFilepath
@@ -264,6 +282,22 @@ declare module '@isomorphic-git/lightning-fs' {
       chown(filepath: string, uid: number, gid: number): Promise<void>
 
       /**
+       * Change the file system timestamps of the object referenced by filepath, following symlinks.
+       * @param filepath
+       * @param atime
+       * @param mtime
+       */
+      utimes(filepath: string, atime: FS.TimeLike, mtime: FS.TimeLike): Promise<void>
+
+      /**
+       * Change the file system timestamps of the symlink referenced by filepath, without following it.
+       * @param filepath
+       * @param atime
+       * @param mtime
+       */
+      lutimes(filepath: string, atime: FS.TimeLike, mtime: FS.TimeLike): Promise<void>
+
+      /**
        * Copy a file or, with `recursive: true`, a directory tree, like [`fs.promises.cp`](https://nodejs.org/api/fs.html#fspromisescpsrc-dest-options) in Node.js.
        * @param oldFilepath
        * @param newFilepath
@@ -335,6 +369,11 @@ declare module '@isomorphic-git/lightning-fs' {
     }
     type TypeOrPromise<T> = T | Promise<T>
     export type SuperBlock = Map<string | number, any>
+    /**
+     * Matches Node's `fs.TimeLike`: a Date, or a Unix timestamp in seconds
+     * expressed as a number or a (possibly fractional) numeric string.
+     */
+    export type TimeLike = string | number | Date
     export interface MKDirOptions {
       /**
        * Posix mode permissions
@@ -359,6 +398,7 @@ declare module '@isomorphic-git/lightning-fs' {
       size: number
       ino: any
       mtimeMs: any
+      atimeMs: any
       ctimeMs: any
       uid: number
       gid: number

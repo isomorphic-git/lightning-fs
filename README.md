@@ -159,6 +159,7 @@ The included properties are:
 - `size`
 - `ino`
 - `mtimeMs`
+- `atimeMs`
 - `ctimeMs`
 - `uid` (defaults to 1, or the `uid` the `FS` was constructed with)
 - `gid` (defaults to 1, or the `gid` the `FS` was constructed with)
@@ -188,6 +189,14 @@ Change the mode (Posix permissions) of a file or directory, like [`fs.chmod`](ht
 ### `fs.chown(filepath, uid, gid, cb)`
 
 Change the owner (`uid`) and group (`gid`) of a file or directory, like [`fs.chown`](https://nodejs.org/api/fs.html#fschownpath-uid-gid-callback) in Node.js.
+
+### `fs.utimes(filepath, atime, mtime, cb)`
+
+Change the access (`atime`) and modification (`mtime`) times of a file or directory, following symlinks, like [`fs.utimes`](https://nodejs.org/api/fs.html#fsutimespath-atime-mtime-callback) in Node.js. Each of `atime`/`mtime` may be a `Date`, a number, or a numeric string; numbers/strings are interpreted as Unix time in seconds (matching Node), and may be fractional.
+
+### `fs.lutimes(filepath, atime, mtime, cb)`
+
+Like `fs.utimes`, but does not follow symlinks - if `filepath` is a symlink, the symlink itself is retimed rather than its target, like [`fs.lutimes`](https://nodejs.org/api/fs.html#fslutimespath-atime-mtime-callback) in Node.js.
 
 ### `fs.cp(oldFilepath, newFilepath, opts?, cb)`
 
@@ -261,6 +270,7 @@ type StatLike = {
   size: number;
   ino: number | string | BigInt;
   mtimeMs: number;
+  atimeMs?: number;
   ctimeMs?: number;
   uid?: number;
   gid?: number;
@@ -291,6 +301,10 @@ interface IBackend {
   // optional - used by fs.chmod/fs.chown
   chmod?(filepath: string, mode: number): void; // throws ENOENT
   chown?(filepath: string, uid: number, gid: number): void; // throws ENOENT
+
+  // optional - used by fs.utimes/fs.lutimes; atime/mtime are milliseconds since the epoch
+  utimes?(filepath: string, atime: number, mtime: number): void; // throws ENOENT
+  lutimes?(filepath: string, atime: number, mtime: number): void; // throws ENOENT
 
   // optional - used by fs.cp
   cp?(oldFilepath: string, newFilepath: string, opts: any): Awaited<void>; // throws ENOENT, EEXIST, EISDIR

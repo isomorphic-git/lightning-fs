@@ -61,6 +61,33 @@ function cleanParamsFilepathUidGid(filepath, uid, gid, ...rest) {
   return [path.normalize(filepath), uid, gid, ...rest];
 }
 
+function cleanParamsFilepathTimes(filepath, atime, mtime, ...rest) {
+  // normalize paths
+  return [path.normalize(filepath), atime, mtime, ...rest];
+}
+
+// Convert a Node-style TimeLike value (Date, number of seconds, or numeric
+// string of seconds - possibly fractional) into milliseconds since the
+// epoch, which is how lightning-fs stores timestamps internally.
+function toTimeMs(time) {
+  // Like Node, only numbers, numeric strings and Dates are accepted. Anything
+  // else - including null, booleans, Infinity and an invalid Date - is
+  // rejected rather than coerced, so a bad value cannot silently become a
+  // timestamp of 0 or Infinity.
+  let ms;
+  if (time instanceof Date) {
+    ms = time.getTime();
+  } else if (typeof time === "number" || typeof time === "string") {
+    ms = Number(time) * 1000;
+  } else {
+    throw new TypeError(`Invalid time value: ${time}`);
+  }
+  if (!Number.isFinite(ms)) {
+    throw new TypeError(`Invalid time value: ${time}`);
+  }
+  return ms;
+}
+
 module.exports = class PromisifiedFS {
   constructor(name, options = {}) {
     this.init = this.init.bind(this)
@@ -79,6 +106,8 @@ module.exports = class PromisifiedFS {
     this.du = this._wrap(this.du, cleanParamsFilepathOpts, false);
     this.chmod = this._wrap(this.chmod, cleanParamsFilepathMode, true)
     this.chown = this._wrap(this.chown, cleanParamsFilepathUidGid, true)
+    this.utimes = this._wrap(this.utimes, cleanParamsFilepathTimes, true)
+    this.lutimes = this._wrap(this.lutimes, cleanParamsFilepathTimes, true)
     this.cp = this._wrap(this.cp, cleanParamsFilepathFilepathOpts, true)
 
     this._deactivationPromise = null
@@ -233,6 +262,14 @@ module.exports = class PromisifiedFS {
   }
   async chown(filepath, uid, gid) {
     await this._backend.chown(filepath, uid, gid);
+    return null;
+  }
+  async utimes(filepath, atime, mtime) {
+    await this._backend.utimes(filepath, toTimeMs(atime), toTimeMs(mtime));
+    return null;
+  }
+  async lutimes(filepath, atime, mtime) {
+    await this._backend.lutimes(filepath, toTimeMs(atime), toTimeMs(mtime));
     return null;
   }
   async cp(oldFilepath, newFilepath, opts) {
