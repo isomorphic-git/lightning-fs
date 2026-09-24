@@ -458,6 +458,47 @@ describe("fs.promises module", () => {
         });
       });
     });
+    it("readlink returns a relative target unchanged", done => {
+      fs.mkdir("/readlink-relative").finally(() => {
+        fs.writeFile("/readlink-relative/a.txt", "hello").then(() => {
+          fs.symlink("a.txt", "/readlink-relative/b.txt").then(() => {
+            fs.readlink("/readlink-relative/b.txt", "utf8").then(data => {
+              expect(data).toBe("a.txt")
+              done();
+            });
+          });
+        });
+      });
+    });
+    it("readlink returns a parent-relative target unchanged", done => {
+      fs.mkdir("/readlink-parent-relative").finally(() => {
+        fs.mkdir("/readlink-parent-relative/sub").finally(() => {
+          fs.writeFile("/readlink-parent-relative/a.txt", "hello").then(() => {
+            fs.symlink("../a.txt", "/readlink-parent-relative/sub/b.txt").then(() => {
+              fs.readlink("/readlink-parent-relative/sub/b.txt", "utf8").then(data => {
+                expect(data).toBe("../a.txt")
+                done();
+              });
+            });
+          });
+        });
+      });
+    });
+    it("resolves through a relative symlink target", done => {
+      fs.mkdir("/readlink-relative-resolve").finally(() => {
+        fs.writeFile("/readlink-relative-resolve/a.txt", "hello").then(() => {
+          fs.symlink("a.txt", "/readlink-relative-resolve/b.txt").then(() => {
+            fs.readFile("/readlink-relative-resolve/b.txt", "utf8").then(data => {
+              expect(data).toBe("hello")
+              fs.stat("/readlink-relative-resolve/b.txt").then(stat => {
+                expect(stat.isFile()).toBe(true)
+                done();
+              });
+            });
+          });
+        });
+      });
+    });
   });
 
   describe("cp", () => {
