@@ -460,6 +460,66 @@ describe("fs.promises module", () => {
         });
       });
     });
+    it("readlink returns a relative target unchanged", done => {
+      fs.mkdir("/readlink-relative").finally(() => {
+        fs.writeFile("/readlink-relative/a.txt", "hello").then(() => {
+          fs.symlink("a.txt", "/readlink-relative/b.txt").then(() => {
+            fs.readlink("/readlink-relative/b.txt", "utf8").then(data => {
+              expect(data).toBe("a.txt")
+              done();
+            });
+          });
+        });
+      });
+    });
+    it("readlink returns a parent-relative target unchanged", done => {
+      fs.mkdir("/readlink-parent-relative").finally(() => {
+        fs.mkdir("/readlink-parent-relative/sub").finally(() => {
+          fs.writeFile("/readlink-parent-relative/a.txt", "hello").then(() => {
+            fs.symlink("../a.txt", "/readlink-parent-relative/sub/b.txt").then(() => {
+              fs.readlink("/readlink-parent-relative/sub/b.txt", "utf8").then(data => {
+                expect(data).toBe("../a.txt")
+                done();
+              });
+            });
+          });
+        });
+      });
+    });
+    it("resolves through a relative symlink target", done => {
+      fs.mkdir("/readlink-relative-resolve").finally(() => {
+        fs.writeFile("/readlink-relative-resolve/a.txt", "hello").then(() => {
+          fs.symlink("a.txt", "/readlink-relative-resolve/b.txt").then(() => {
+            fs.readFile("/readlink-relative-resolve/b.txt", "utf8").then(data => {
+              expect(data).toBe("hello")
+              fs.stat("/readlink-relative-resolve/b.txt").then(stat => {
+                expect(stat.isFile()).toBe(true)
+                done();
+              });
+            });
+          });
+        });
+      });
+    });
+    it("resolves through an absolute target that is not normalized", done => {
+      fs.mkdir("/readlink-abs-resolve").finally(() => {
+        fs.mkdir("/readlink-abs-resolve/sub").finally(() => {
+          fs.writeFile("/readlink-abs-resolve/a.txt", "hello").then(() => {
+            // Targets are stored verbatim, so '.', '..' and repeated slashes
+            // survive and have to be resolved on lookup.
+            fs.symlink("/readlink-abs-resolve/sub/..//./a.txt", "/readlink-abs-resolve/b.txt").then(() => {
+              fs.readlink("/readlink-abs-resolve/b.txt").then(target => {
+                expect(target).toBe("/readlink-abs-resolve/sub/..//./a.txt")
+                fs.readFile("/readlink-abs-resolve/b.txt", "utf8").then(data => {
+                  expect(data).toBe("hello")
+                  done();
+                });
+              });
+            });
+          });
+        });
+      });
+    });
   });
 
   describe("cp", () => {

@@ -463,6 +463,71 @@ describe("fs module", () => {
         });
       });
     });
+    it("readlink returns a relative target unchanged", done => {
+      fs.mkdir("/readlink-relative", () => {
+        fs.writeFile("/readlink-relative/a.txt", "hello", () => {
+          fs.symlink("a.txt", "/readlink-relative/b.txt", () => {
+            fs.readlink("/readlink-relative/b.txt", "utf8", (err, data) => {
+              expect(err).toBe(null)
+              expect(data).toBe("a.txt")
+              done();
+            });
+          });
+        });
+      });
+    });
+    it("readlink returns a parent-relative target unchanged", done => {
+      fs.mkdir("/readlink-parent-relative", () => {
+        fs.mkdir("/readlink-parent-relative/sub", () => {
+          fs.writeFile("/readlink-parent-relative/a.txt", "hello", () => {
+            fs.symlink("../a.txt", "/readlink-parent-relative/sub/b.txt", () => {
+              fs.readlink("/readlink-parent-relative/sub/b.txt", "utf8", (err, data) => {
+                expect(err).toBe(null)
+                expect(data).toBe("../a.txt")
+                done();
+              });
+            });
+          });
+        });
+      });
+    });
+    it("resolves through a relative symlink target", done => {
+      fs.mkdir("/readlink-relative-resolve", () => {
+        fs.writeFile("/readlink-relative-resolve/a.txt", "hello", () => {
+          fs.symlink("a.txt", "/readlink-relative-resolve/b.txt", () => {
+            fs.readFile("/readlink-relative-resolve/b.txt", "utf8", (err, data) => {
+              expect(err).toBe(null)
+              expect(data).toBe("hello")
+              fs.stat("/readlink-relative-resolve/b.txt", (err, stat) => {
+                expect(err).toBe(null)
+                expect(stat.isFile()).toBe(true)
+                done();
+              });
+            });
+          });
+        });
+      });
+    });
+    it("resolves through an absolute target that is not normalized", done => {
+      fs.mkdir("/readlink-abs-resolve", () => {
+        fs.mkdir("/readlink-abs-resolve/sub", () => {
+          fs.writeFile("/readlink-abs-resolve/a.txt", "hello", () => {
+            // Targets are stored verbatim, so '.', '..' and repeated slashes
+            // survive and have to be resolved on lookup.
+            fs.symlink("/readlink-abs-resolve/sub/..//./a.txt", "/readlink-abs-resolve/b.txt", () => {
+              fs.readlink("/readlink-abs-resolve/b.txt", (err, target) => {
+                expect(target).toBe("/readlink-abs-resolve/sub/..//./a.txt")
+                fs.readFile("/readlink-abs-resolve/b.txt", "utf8", (err, data) => {
+                  expect(err).toBe(null)
+                  expect(data).toBe("hello")
+                  done();
+                });
+              });
+            });
+          });
+        });
+      });
+    });
   });
 
   describe("utimes", () => {

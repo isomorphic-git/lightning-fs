@@ -71,6 +71,11 @@ function reducer(ancestors, current) {
   // Collapse '.' references
   if (current === ".") return ancestors;
 
+  // Discard the empty components produced by repeated slashes, so that a
+  // following '..' pops a real directory instead of cancelling one of them
+  // ('/a//../b' is '/b', not '/a/b').
+  if (current === "") return ancestors;
+
   // Collapse '..' references
   if (current === "..") {
     if (ancestors.length === 1) {

@@ -176,7 +176,7 @@ Like `fs.stat` except that paths to symlinks return the symlink stats not the fi
 
 ### `fs.symlink(target, filepath, cb)`
 
-Create a symlink at `filepath` that points to `target`. The symlink's `uid`/`gid` are the ones the `FS` was constructed with.
+Create a symlink at `filepath` that points to `target`. The symlink's `uid`/`gid` are the ones the `FS` was constructed with. `target` is stored verbatim, as in Node — it is opaque link content, not a path, so it is not normalized or resolved.
 
 ### `fs.readlink(filepath, opts?, cb)`
 

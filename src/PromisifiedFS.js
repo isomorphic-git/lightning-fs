@@ -40,6 +40,12 @@ function cleanParamsFilepathFilepath(oldFilepath, newFilepath, ...rest) {
   return [path.normalize(oldFilepath), path.normalize(newFilepath), ...rest];
 }
 
+function cleanParamsTargetFilepath(target, filepath, ...rest) {
+  // A symlink target is opaque link content, not a path to resolve, so it is
+  // stored verbatim like Node does. Only the link's own path is normalized.
+  return [target, path.normalize(filepath), ...rest];
+}
+
 function cleanParamsFilepathFilepathOpts(oldFilepath, newFilepath, opts, ...rest) {
   // normalize paths
   oldFilepath = path.normalize(oldFilepath);
@@ -101,7 +107,7 @@ module.exports = class PromisifiedFS {
     this.stat = this._wrap(this.stat, cleanParamsFilepathOpts, false)
     this.lstat = this._wrap(this.lstat, cleanParamsFilepathOpts, false)
     this.readlink = this._wrap(this.readlink, cleanParamsFilepathOpts, false)
-    this.symlink = this._wrap(this.symlink, cleanParamsFilepathFilepath, true)
+    this.symlink = this._wrap(this.symlink, cleanParamsTargetFilepath, true)
     this.backFile = this._wrap(this.backFile, cleanParamsFilepathOpts, true)
     this.du = this._wrap(this.du, cleanParamsFilepathOpts, false);
     this.chmod = this._wrap(this.chmod, cleanParamsFilepathMode, true)
