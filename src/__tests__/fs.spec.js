@@ -465,6 +465,121 @@ describe("fs module", () => {
     });
   });
 
+  describe("utimes", () => {
+    it("utimes sets mtime, readable back via stat", done => {
+      fs.writeFile("/utimes.txt", "HELLO", () => {
+        fs.utimes("/utimes.txt", 1000, 2000, err => {
+          expect(err).toBe(null)
+          fs.stat("/utimes.txt", (err, stats) => {
+            expect(err).toBe(null)
+            expect(stats.mtimeMs).toEqual(2000000);
+            expect(stats.atimeMs).toEqual(1000000);
+            done();
+          });
+        });
+      });
+    });
+    it("a Date argument and a numeric-seconds argument produce the same stored value", done => {
+      fs.writeFile("/utimes-date.txt", "HELLO", () => {
+        const date = new Date(3000000);
+        fs.utimes("/utimes-date.txt", date, date, err => {
+          expect(err).toBe(null)
+          fs.stat("/utimes-date.txt", (err, dateStats) => {
+            expect(err).toBe(null)
+            fs.utimes("/utimes-date.txt", 3000, 3000, err => {
+              expect(err).toBe(null)
+              fs.stat("/utimes-date.txt", (err, numStats) => {
+                expect(err).toBe(null)
+                expect(numStats.mtimeMs).toEqual(dateStats.mtimeMs);
+                expect(numStats.atimeMs).toEqual(dateStats.atimeMs);
+                expect(numStats.mtimeMs).toEqual(3000000);
+                done();
+              });
+            });
+          });
+        });
+      });
+    });
+    it("utimes follows a symlink (retimes the target, not the link)", done => {
+      fs.mkdir("/utimes-symlink", () => {
+        fs.writeFile("/utimes-symlink/target.txt", "HELLO", () => {
+          fs.symlink("/utimes-symlink/target.txt", "/utimes-symlink/link.txt", () => {
+            fs.utimes("/utimes-symlink/link.txt", 5000, 6000, err => {
+              expect(err).toBe(null)
+              fs.stat("/utimes-symlink/target.txt", (err, targetStats) => {
+                expect(err).toBe(null)
+                expect(targetStats.mtimeMs).toEqual(6000000);
+                fs.lstat("/utimes-symlink/link.txt", (err, linkStats) => {
+                  expect(err).toBe(null)
+                  expect(linkStats.mtimeMs).not.toEqual(6000000);
+                  done();
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+    it("lutimes does not follow a symlink (retimes the link, target untouched)", done => {
+      fs.mkdir("/lutimes-symlink", () => {
+        fs.writeFile("/lutimes-symlink/target.txt", "HELLO", () => {
+          fs.symlink("/lutimes-symlink/target.txt", "/lutimes-symlink/link.txt", () => {
+            fs.stat("/lutimes-symlink/target.txt", (err, originalTargetStats) => {
+              expect(err).toBe(null)
+              fs.lutimes("/lutimes-symlink/link.txt", 7000, 8000, err => {
+                expect(err).toBe(null)
+                fs.lstat("/lutimes-symlink/link.txt", (err, linkStats) => {
+                  expect(err).toBe(null)
+                  expect(linkStats.mtimeMs).toEqual(8000000);
+                  fs.stat("/lutimes-symlink/target.txt", (err, targetStats) => {
+                    expect(err).toBe(null)
+                    expect(targetStats.mtimeMs).toEqual(originalTargetStats.mtimeMs);
+                    done();
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+    it("throws ENOENT for a missing path", done => {
+      fs.utimes("/utimes-missing.txt", 1, 1, err => {
+        expect(err).not.toBe(null);
+        expect(err.code).toEqual("ENOENT");
+        done();
+      });
+    });
+    it("lutimes throws ENOENT for a missing path", done => {
+      fs.lutimes("/lutimes-missing.txt", 1, 1, err => {
+        expect(err).not.toBe(null);
+        expect(err.code).toEqual("ENOENT");
+        done();
+      });
+    });
+    it("errors on a time that is not a number, numeric string or valid Date", done => {
+      fs.writeFile("/utimes-invalid.txt", "HELLO", () => {
+        fs.utimes("/utimes-invalid.txt", null, null, err => {
+          expect(err).not.toBe(null);
+          fs.utimes("/utimes-invalid.txt", Infinity, Infinity, err2 => {
+            expect(err2).not.toBe(null);
+            done();
+          });
+        });
+      });
+    });
+    it("stores a negative time rather than silently using the current time", done => {
+      fs.writeFile("/utimes-negative.txt", "HELLO", () => {
+        fs.utimes("/utimes-negative.txt", -1, -1, () => {
+          fs.stat("/utimes-negative.txt", (err, stats) => {
+            expect(stats.mtimeMs).toEqual(-1000);
+            done();
+          });
+        });
+      });
+    });
+  });
+
   describe("du", () => {
     it("du returns the total file size of a path", done => {
       fs.mkdir("/du", () => {

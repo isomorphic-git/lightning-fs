@@ -287,6 +287,18 @@ module.exports = class CacheFS {
     stat.gid = gid;
     stat.ctimeMs = Date.now();
   }
+  utimes(filepath, atimeMs, mtimeMs) {
+    let stat = this._lookup(filepath, true).get(STAT);
+    stat.atimeMs = atimeMs;
+    stat.mtimeMs = mtimeMs;
+    stat.ctimeMs = Date.now();
+  }
+  lutimes(filepath, atimeMs, mtimeMs) {
+    let stat = this._lookup(filepath, false).get(STAT);
+    stat.atimeMs = atimeMs;
+    stat.mtimeMs = mtimeMs;
+    stat.ctimeMs = Date.now();
+  }
   _du (dir) {
     let size = 0;
     for (const [name, entry] of dir.entries()) {

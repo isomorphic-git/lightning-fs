@@ -33,6 +33,8 @@ module.exports = class FS {
     this.flush = this.flush.bind(this)
     this.chmod = this.chmod.bind(this)
     this.chown = this.chown.bind(this)
+    this.utimes = this.utimes.bind(this)
+    this.lutimes = this.lutimes.bind(this)
     this.cp = this.cp.bind(this)
   }
   init(name, options) {
@@ -101,6 +103,14 @@ module.exports = class FS {
   chown(filepath, uid, gid, cb) {
     const [resolve, reject] = wrapCallback(cb);
     this.promises.chown(filepath, uid, gid).then(resolve).catch(reject);
+  }
+  utimes(filepath, atime, mtime, cb) {
+    const [resolve, reject] = wrapCallback(cb);
+    this.promises.utimes(filepath, atime, mtime).then(resolve).catch(reject);
+  }
+  lutimes(filepath, atime, mtime, cb) {
+    const [resolve, reject] = wrapCallback(cb);
+    this.promises.lutimes(filepath, atime, mtime).then(resolve).catch(reject);
   }
   cp(oldFilepath, newFilepath, opts, cb) {
     const [resolve, reject] = wrapCallback(opts, cb);

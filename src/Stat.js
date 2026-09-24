@@ -5,6 +5,7 @@ module.exports = class Stat {
     this.size = stats.size;
     this.ino = stats.ino;
     this.mtimeMs = stats.mtimeMs;
+    this.atimeMs = stats.atimeMs || stats.mtimeMs;
     this.ctimeMs = stats.ctimeMs || stats.mtimeMs;
     this.uid = stats.uid == null ? 1 : stats.uid;
     this.gid = stats.gid == null ? 1 : stats.gid;
