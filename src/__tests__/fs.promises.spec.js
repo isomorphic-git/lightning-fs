@@ -768,6 +768,17 @@ describe("fs.promises module", () => {
         });
       });
     });
+    it("preserves an access time of 0 instead of falling back to mtime", done => {
+      fs.writeFile("/utimes-epoch.txt", "HELLO").then(() => {
+        fs.utimes("/utimes-epoch.txt", 0, 5).then(() => {
+          fs.stat("/utimes-epoch.txt").then(stats => {
+            expect(stats.atimeMs).toEqual(0);
+            expect(stats.mtimeMs).toEqual(5000);
+            done();
+          });
+        });
+      });
+    });
   });
 
 });

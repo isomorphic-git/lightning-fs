@@ -578,6 +578,17 @@ describe("fs module", () => {
         });
       });
     });
+    it("preserves an access time of 0 instead of falling back to mtime", done => {
+      fs.writeFile("/utimes-epoch.txt", "HELLO", () => {
+        fs.utimes("/utimes-epoch.txt", 0, 5, () => {
+          fs.stat("/utimes-epoch.txt", (err, stats) => {
+            expect(stats.atimeMs).toEqual(0);
+            expect(stats.mtimeMs).toEqual(5000);
+            done();
+          });
+        });
+      });
+    });
   });
 
   describe("du", () => {
