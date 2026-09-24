@@ -109,9 +109,7 @@ module.exports = class DefaultBackend {
     if (!data && this._http) {
       let lstat = this._cache.lstat(filepath)
       while (lstat.type === 'symlink') {
-        // Same as in CacheFS._lookup: a verbatim absolute target needs
-        // normalizing, which path.resolve only does for relative paths.
-        filepath = path.normalize(path.resolve(path.dirname(filepath), lstat.target))
+        filepath = path.resolve(path.dirname(filepath), lstat.target)
         lstat = this._cache.lstat(filepath)
       }
       data = await this._http.readFile(filepath)
