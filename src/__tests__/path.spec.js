@@ -52,6 +52,14 @@ describe("path module", () => {
       expect(path.normalize("./hello/../world.txt")).toEqual("./world.txt");
       expect(path.normalize("/hello/../world.txt")).toEqual("/world.txt");
     });
+    it("should collapse repeated slashes before resolving '..'", () => {
+      // The empty components from '//' must be discarded, not cancelled out
+      // by a following '..'.
+      expect(path.normalize("/hello//world.txt")).toEqual("/hello/world.txt");
+      expect(path.normalize("/hello//../world.txt")).toEqual("/world.txt");
+      expect(path.normalize("/a/b//../../c")).toEqual("/c");
+      expect(path.normalize("./hello//../world.txt")).toEqual("./world.txt");
+    });
     it("should normalize relative paths above '.'", () => {
       expect(path.normalize("./hello/../../world.txt")).toEqual(
         "./../world.txt"
