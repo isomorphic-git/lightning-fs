@@ -110,6 +110,17 @@ describe("fs.promises module", () => {
         done();
       });
     });
+    it("reads through a path that traverses above the root", done => {
+      // '..' at the root is discarded, so this is just /readFile/above.txt.
+      fs.mkdir("/readFile").catch(err => { if (err.code !== "EEXIST") throw err; }).then(() => {
+        fs.writeFile("/readFile/above.txt", "HELLO").then(() => {
+          fs.readFile("/../readFile/../readFile/above.txt", "utf8").then(data => {
+            expect(data).toEqual("HELLO");
+            done();
+          });
+        });
+      });
+    });
     it("read file", done => {
       fs.mkdir("/readFile").catch(err => { if (err.code !== "EEXIST") throw err; }).then(() => {
         fs.writeFile("/readFile/readFile-uint8.txt", "HELLO").then(() => {

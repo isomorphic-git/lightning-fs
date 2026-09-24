@@ -80,7 +80,10 @@ function reducer(ancestors, current) {
   if (current === "..") {
     if (ancestors.length === 1) {
       if (ancestors[0] === "/") {
-        throw new Error("Unable to normalize path - traverses above root directory");
+        // The root is its own parent, so '..' is discarded there rather than
+        // escaping the filesystem: '/..' is '/' and '/../a' is '/a', matching
+        // POSIX and Node.
+        return ancestors;
       }
       // assert(ancestors[0] === '.')
       if (ancestors[0] === ".") {

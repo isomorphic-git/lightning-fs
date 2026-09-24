@@ -65,8 +65,15 @@ describe("path module", () => {
         "./../world.txt"
       );
     });
-    it("should refust to normalize absolute paths above '/'", () => {
-      expect(() => path.normalize("/hello/../../world.txt")).toThrow();
+    it("should clamp '..' at the root directory", () => {
+      // Like POSIX and Node, the root is its own parent, so '..' is discarded
+      // there instead of throwing or escaping the filesystem.
+      expect(path.normalize("/..")).toEqual("/");
+      expect(path.normalize("/../world.txt")).toEqual("/world.txt");
+      expect(path.normalize("/hello/../../world.txt")).toEqual("/world.txt");
+      expect(path.normalize("/hello/../../../a/b")).toEqual("/a/b");
+      expect(path.normalize("/a/b/../../../..")).toEqual("/");
+      expect(path.normalize("/..//..//a")).toEqual("/a");
     });
   });
 
