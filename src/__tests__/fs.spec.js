@@ -88,6 +88,18 @@ describe("fs module", () => {
         done();
       });
     });
+    it("reads through a path that traverses above the root", done => {
+      // '..' at the root is discarded, so this is just /readFile/above.txt.
+      fs.mkdir("/readFile", () => {
+        fs.writeFile("/readFile/above.txt", "HELLO", () => {
+          fs.readFile("/../readFile/../readFile/above.txt", "utf8", (err, data) => {
+            expect(err).toBe(null);
+            expect(data).toEqual("HELLO");
+            done();
+          });
+        });
+      });
+    });
     it("read file", done => {
       fs.mkdir("/readFile", err => {
         fs.writeFile("/readFile/readFile-uint8.txt", "HELLO", err => {
