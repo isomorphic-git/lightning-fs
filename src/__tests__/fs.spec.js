@@ -508,6 +508,26 @@ describe("fs module", () => {
         });
       });
     });
+    it("resolves through an absolute target that is not normalized", done => {
+      fs.mkdir("/readlink-abs-resolve", () => {
+        fs.mkdir("/readlink-abs-resolve/sub", () => {
+          fs.writeFile("/readlink-abs-resolve/a.txt", "hello", () => {
+            // Targets are stored verbatim, so '.', '..' and repeated slashes
+            // survive and have to be resolved on lookup.
+            fs.symlink("/readlink-abs-resolve/sub/..//./a.txt", "/readlink-abs-resolve/b.txt", () => {
+              fs.readlink("/readlink-abs-resolve/b.txt", (err, target) => {
+                expect(target).toBe("/readlink-abs-resolve/sub/..//./a.txt")
+                fs.readFile("/readlink-abs-resolve/b.txt", "utf8", (err, data) => {
+                  expect(err).toBe(null)
+                  expect(data).toBe("hello")
+                  done();
+                });
+              });
+            });
+          });
+        });
+      });
+    });
   });
 
   describe("du", () => {
