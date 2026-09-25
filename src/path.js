@@ -11,7 +11,7 @@ function resolvePath(...paths) {
   let result = '';
   for (let path of paths) {
     if (path.startsWith('/')) {
-      result = path;
+      result = normalizePath(path);
     } else {
       result = normalizePath(joinPath(result, path));
     }

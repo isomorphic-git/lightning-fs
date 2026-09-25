@@ -121,10 +121,7 @@ module.exports = class CacheFS {
       if (follow || i < parts.length - 1) {
         const stat = dir.get(STAT)
         if (stat.type === 'symlink') {
-          // Targets are stored verbatim, so they may still contain '.', '..'
-          // or repeated slashes. path.resolve only normalizes relative paths,
-          // so an absolute target has to be normalized here before lookup.
-          let target = path.normalize(path.resolve(partialPath, stat.target))
+          let target = path.resolve(partialPath, stat.target)
           dir = this._lookup(target)
         }
         if (!partialPath) {

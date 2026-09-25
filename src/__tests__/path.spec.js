@@ -77,6 +77,17 @@ describe("path module", () => {
     });
   });
 
+  describe("path.resolve", () => {
+    it("should normalize absolute paths", () => {
+      expect(path.resolve("/a", "/dir//x")).toEqual("/dir/x");
+      expect(path.resolve("/a", "/dir/sub/../x")).toEqual("/dir/x");
+      expect(path.resolve("/a", "/dir/./x")).toEqual("/dir/x");
+    });
+    it("should resolve relative targets", () => {
+      expect(path.resolve("/a/b", "../c")).toEqual("/a/c");
+    });
+  });
+
   describe("path.dirname", () => {
     it("should return parent directory of file", () => {
       expect(path.dirname("./hello/world.txt")).toEqual("./hello");
