@@ -7,6 +7,8 @@ module.exports = class CacheFS {
   constructor(name, { uid = 1, gid = 1 } = {}) {
     this._uid = uid;
     this._gid = gid;
+    // The numbers of the files whose deletion is going on (see autoinc)
+    this._deleting = new Set();
   }
   _makeRoot(root = new Map()) {
     root.set(STAT, { mode: 0o777, type: "dir", size: 0, ino: 0, mtimeMs: Date.now(), uid: this._uid, gid: this._gid });
@@ -40,7 +42,10 @@ module.exports = class CacheFS {
     return count;
   }
   autoinc () {
-    let val = this._maxInode(this._root.get("/")) + 1;
+    // Above the numbers of the files whose deletion is going on too: they are
+    // out of the tree, and go back with their numbers should the storage
+    // refuse the deletion (see DefaultBackend.unlink).
+    let val = Math.max(this._maxInode(this._root.get("/")), ...this._deleting) + 1;
     return val;
   }
   _maxInode(map) {

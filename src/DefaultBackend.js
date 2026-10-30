@@ -16,6 +16,24 @@ module.exports = class DefaultBackend {
       // The tree stays in memory and goes out with the next save
       this.flush().catch(err => console.error(err));
     }, 500);
+    // For each path, the last of the calls that change it, which may not
+    // have ended yet (see _inTurn).
+    this._turns = new Map();
+  }
+  // Runs fn once the calls before it that change any of these paths have
+  // ended, putting the tree back included. Each then finds the tree as the
+  // one before it left it, so that what a refused write or deletion puts back
+  // is what was there when it started, not what another call left on its way.
+  _inTurn(paths, fn) {
+    const done = Promise.all(paths.map(p => this._turns.get(p))).then(fn);
+    const ended = done.catch(() => {});
+    for (const p of paths) this._turns.set(p, ended);
+    ended.then(() => {
+      for (const p of paths) {
+        if (this._turns.get(p) === ended) this._turns.delete(p);
+      }
+    });
+    return done;
   }
   async init (name, {
     wipe,
@@ -137,32 +155,70 @@ module.exports = class DefaultBackend {
       }
       data = encode(data);
     }
-    const stat = await this._cache.writeStat(filepath, data.byteLength, { mode });
-    await this._idb.writeFile(stat.ino, data)
+    return this._inTurn([filepath], () => this._store(filepath, data, data.byteLength, mode));
+  }
+  // Gives filepath an entry, then stores its content. Should the storage
+  // refuse the content, the tree goes back to what it was, so that the next
+  // save of the tree does not keep an entry whose content was never stored.
+  async _store(filepath, data, size, mode) {
+    // As writeStat would: the root is a folder (and has no name to look up)
+    if (filepath === "/") throw new EISDIR();
+    const dir = this._cache._lookup(path.dirname(filepath));
+    const name = path.basename(filepath);
+    const before = dir.get(name);
+    const stat = this._cache.writeStat(filepath, size, { mode });
+    const entry = dir.get(name);
+    try {
+      await this._idb.writeFile(stat.ino, data)
+    } catch (err) {
+      // Unless a call that reached the file by another path has taken the
+      // name meanwhile. The folder goes along when it is renamed, so the
+      // entry is still found in it.
+      if (dir.get(name) === entry) {
+        if (before === undefined) dir.delete(name);
+        else dir.set(name, before);
+      }
+      throw err;
+    }
   }
   async unlink(filepath, opts) {
-    const stat = this._cache.lstat(filepath);
-    this._cache.unlink(filepath);
-    if (stat.type !== 'symlink') {
-      await this._idb.unlink(stat.ino)
-    }
+    return this._inTurn([filepath], async () => {
+      const stat = this._cache.lstat(filepath);
+      const dir = this._cache._lookup(path.dirname(filepath));
+      const name = path.basename(filepath);
+      const entry = dir.get(name);
+      this._cache.unlink(filepath);
+      if (stat.type !== 'symlink') {
+        this._cache._deleting.add(stat.ino);
+        try {
+          await this._idb.unlink(stat.ino)
+        } catch (err) {
+          // As in _store, a deletion the storage refuses leaves the file in
+          // the tree, unless the name was taken meanwhile.
+          if (!dir.has(name)) dir.set(name, entry);
+          throw err;
+        } finally {
+          this._cache._deleting.delete(stat.ino);
+        }
+      }
+    });
   }
   readdir(filepath, opts) {
     return this._cache.readdir(filepath);
   }
   mkdir(filepath, opts) {
     const { mode = 0o777 } = opts;
-    this._cache.mkdir(filepath, { mode });
+    return this._inTurn([filepath], () => this._cache.mkdir(filepath, { mode }));
   }
   rmdir(filepath, opts) {
     // Never allow deleting the root directory.
     if (filepath === "/") {
       throw new ENOTEMPTY();
     }
-    this._cache.rmdir(filepath);
+    return this._inTurn([filepath], () => this._cache.rmdir(filepath));
   }
   rename(oldFilepath, newFilepath) {
-    this._cache.rename(oldFilepath, newFilepath);
+    return this._inTurn([oldFilepath, newFilepath], () => this._cache.rename(oldFilepath, newFilepath));
   }
   stat(filepath, opts) {
     return this._cache.stat(filepath);
@@ -174,19 +230,22 @@ module.exports = class DefaultBackend {
     return this._cache.readlink(filepath);
   }
   symlink(target, filepath) {
-    this._cache.symlink(target, filepath);
+    return this._inTurn([filepath], () => this._cache.symlink(target, filepath));
   }
+  // These change the entry in place, and so take their turn too: a write
+  // refused before them would otherwise put back the entry as it was,
+  // without their change.
   chmod(filepath, mode) {
-    this._cache.chmod(filepath, mode);
+    return this._inTurn([filepath], () => this._cache.chmod(filepath, mode));
   }
   chown(filepath, uid, gid) {
-    this._cache.chown(filepath, uid, gid);
+    return this._inTurn([filepath], () => this._cache.chown(filepath, uid, gid));
   }
   utimes(filepath, atime, mtime) {
-    this._cache.utimes(filepath, atime, mtime);
+    return this._inTurn([filepath], () => this._cache.utimes(filepath, atime, mtime));
   }
   lutimes(filepath, atime, mtime) {
-    this._cache.lutimes(filepath, atime, mtime);
+    return this._inTurn([filepath], () => this._cache.lutimes(filepath, atime, mtime));
   }
   _exists(filepath) {
     try {
@@ -225,43 +284,53 @@ module.exports = class DefaultBackend {
   async _cpOne(src, dest, opts) {
     if (opts.filter && (await opts.filter(src, dest)) === false) return;
 
+    // In turn with the other calls that change either path (see _inTurn), so
+    // that src is copied as the calls before left it. The filter runs before,
+    // as it may call the file system itself. A folder's entries are listed
+    // once this turn has ended, and each takes a turn of its own.
+    const srcStat = await this._inTurn([src, dest], () => this._cpEntry(src, dest, opts));
+    if (srcStat.type !== "dir") return;
+    for (const entry of this._cache.readdir(src)) {
+      await this._cpOne(path.join(src, entry), path.join(dest, entry), opts);
+    }
+  }
+  // Copies src to dest, only making the folder if src is one, and returns the
+  // stat of src.
+  async _cpEntry(src, dest, opts) {
     const srcStat = opts.dereference ? this._cache.stat(src) : this._cache.lstat(src);
 
     if (srcStat.type === "symlink") {
       if (this._exists(dest)) {
         if (!opts.force) {
           if (opts.errorOnExist) throw new EEXIST(dest);
-          return;
+          return srcStat;
         }
         this._cache.unlink(dest);
       }
       const target = this._cache.readlink(src);
       this._cache.symlink(target, dest);
-      return;
+      return srcStat;
     }
 
     if (srcStat.type === "dir") {
       if (!opts.recursive) throw new EISDIR(src);
       // Like Node's fs.cp, create any missing destination ancestor directories.
       this._mkdirp(dest, srcStat.mode);
-      for (const entry of this._cache.readdir(src)) {
-        await this._cpOne(path.join(src, entry), path.join(dest, entry), opts);
-      }
-      return;
+      return srcStat;
     }
 
     if (this._exists(dest)) {
       // errorOnExist only takes effect when force is false, matching Node's fs.cp.
       if (!opts.force) {
         if (opts.errorOnExist) throw new EEXIST(dest);
-        return;
+        return srcStat;
       }
     }
     // Copy the raw bytes directly from/to the underlying storage, bypassing
     // the utf8 encode/decode that the higher-level readFile/writeFile do.
     const data = await this._idb.readFile(srcStat.ino);
-    const stat = this._cache.writeStat(dest, srcStat.size, { mode: srcStat.mode });
-    await this._idb.writeFile(stat.ino, data);
+    await this._store(dest, data, srcStat.size, srcStat.mode);
+    return srcStat;
   }
   async backFile(filepath, opts) {
     let size = await this._http.sizeFile(filepath)
