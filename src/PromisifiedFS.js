@@ -185,7 +185,8 @@ module.exports = class PromisifiedFS {
         if (mutating) this._backend.saveSuperblock() // this is debounced
         if (this._operations.size === 0) {
           if (!this._deactivationTimeout) clearTimeout(this._deactivationTimeout)
-          this._deactivationTimeout = setTimeout(this._deactivate.bind(this), 500)
+          // Report a failed deactivation rather than leave it unhandled; the next operation carries on (see _activate)
+          this._deactivationTimeout = setTimeout(() => this._deactivate().catch(err => console.error(err)), 500)
         }
       }
     }
@@ -197,7 +198,14 @@ module.exports = class PromisifiedFS {
       clearTimeout(this._deactivationTimeout)
       this._deactivationTimeout = null
     }
-    if (this._deactivationPromise) await this._deactivationPromise
+    // A failed deactivation (e.g. IndexedDB refused the superblock write) is reported where it runs: logged by the
+    // idle timer, or thrown from init(). Carry on from whatever state it left the backend in, rather than fail every
+    // operation from now on.
+    if (this._deactivationPromise) {
+      try {
+        await this._deactivationPromise
+      } catch (e) {}
+    }
     this._deactivationPromise = null
     if (!this._activationPromise) {
       this._activationPromise = this._backend.activate ? this._backend.activate() : Promise.resolve();
