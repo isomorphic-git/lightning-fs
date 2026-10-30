@@ -13,7 +13,8 @@ const path = require("./path.js");
 module.exports = class DefaultBackend {
   constructor() {
     this.saveSuperblock = debounce(() => {
-      this.flush();
+      // The tree stays in memory and goes out with the next save
+      this.flush().catch(err => console.error(err));
     }, 500);
   }
   async init (name, {
