@@ -43,6 +43,7 @@ describe("refused superblock writes", () => {
 
     const reloaded = new FS("testfs-refused-superblock", { db }).promises;
     expect(await reloaded.readdir("/")).toEqual(["a.txt", "b.txt", "c.txt"]);
+    expect(await reloaded.readFile("/b.txt", "utf8")).toBe("B");
     expect(await reloaded.readFile("/c.txt", "utf8")).toBe("C");
     // Both refusals were reported: the debounced save's and the deactivation's
     expect(console.error.calls.allArgs().filter(([err]) => err === db.refusal).length).toBe(2);
