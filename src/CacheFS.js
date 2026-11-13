@@ -222,6 +222,8 @@ module.exports = class CacheFS {
     return stat;
   }
   unlink(filepath) {
+    let file = this._lookup(filepath);
+    if (file.get(STAT).type === 'dir') throw new EISDIR();
     // remove from parent
     let parent = this._lookup(path.dirname(filepath));
     let basename = path.basename(filepath);
@@ -237,7 +239,9 @@ module.exports = class CacheFS {
     // insert into new parent directory
     destDir.set(basename, entry);
     // remove from old parent directory
-    this.unlink(oldFilepath)
+    let parent = this._lookup(path.dirname(oldFilepath));
+    let oldBasename = path.basename(oldFilepath);
+    parent.delete(oldBasename)
   }
   stat(filepath) {
     return this._lookup(filepath).get(STAT);

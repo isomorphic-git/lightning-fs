@@ -271,6 +271,16 @@ describe("fs.promises module", () => {
         });
       });
     });
+
+    it("error delete directory", done => {
+      fs.mkdir("/unlink-dir").then(() => {
+        fs.unlink("/unlink-dir").catch(err => {
+          expect(err).not.toBe(null);
+          expect(err.code).toBe("EISDIR");
+          done();
+        });
+      });
+    });
   });
 
   describe("rename", () => {

@@ -240,6 +240,16 @@ describe("fs module", () => {
         });
       });
     });
+
+    it("error delete directory", done => {
+      fs.mkdir("/unlink-dir", () => {
+        fs.unlink("/unlink-dir", (err) => {
+          expect(err).not.toBe(null);
+          expect(err.code).toBe("EISDIR");
+          done();
+        });
+      });
+    });
   });
 
   describe("rename", () => {
