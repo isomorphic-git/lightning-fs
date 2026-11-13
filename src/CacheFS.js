@@ -222,7 +222,7 @@ module.exports = class CacheFS {
     return stat;
   }
   unlink(filepath) {
-    let file = this._lookup(filepath);
+    let file = this._lookup(filepath, false);
     if (file.get(STAT).type === 'dir') throw new EISDIR();
     // remove from parent
     let parent = this._lookup(path.dirname(filepath));
